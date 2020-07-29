@@ -1,4 +1,4 @@
-To do List (from easy to hard)  
+TODO List (from easy to hard)  
 
 ~~1. A more concise representation of station pairs with C++ class.~~
 
