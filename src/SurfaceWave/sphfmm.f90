@@ -35,7 +35,7 @@ subroutine synthetic(nx,ny,velf,goxdf,gozdf,dvxdf,dvzdf,&
   REAL(sp)                        :: x,z,goxb,gozb,dnxb,dnzb
 
   ! pass information to global variables
-  gdx=8
+  gdx = 8
   gdz=8
   asgr=1
   sgdl=8
