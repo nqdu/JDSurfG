@@ -81,7 +81,7 @@ c-----
 c        real*4 thkm(NLAY),vpm(NLAY),vsm(NLAY),rhom(NLAY)
         integer(c_int),value,INTENT(IN) :: nlayer,iflsph,iwave,mode,igr,kmax
         real(c_float),INTENT(IN):: thkm(nlayer),vpm(nlayer),vsm(nlayer),rhom(nlayer)
-        real(c_double),INTENT(IN) :: t(kmax)
+        real(c_double),INTENT(IN) ::  t(kmax)
         real(c_double),INTENT(INOUT) :: cg(kmax)
         real(c_double) :: twopi,one,onea
         real(c_double) :: cc,c1,clow,cm,dc,t1
