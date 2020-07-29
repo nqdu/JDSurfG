@@ -290,7 +290,7 @@ int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
         // compute index for this part
         int start = np / nthread * nn;
         int end = np / nthread * (nn + 1);
-        if(nn==nthread - 1) end = np;
+        if(nn == nthread - 1) end = np;
 
         // open a file to save frechet kernel
         std::string filename = save_dir + "/" + std::to_string(nn) +".txt";
