@@ -46,4 +46,4 @@ $(surfdir)/sphfmm.o: $(surfdir)/sphfmm.f90
  $(surfdir)/fmm.o: $(surfdir)/fmm.f90
 	$(FC) -g -c $< -o $@  $(opt) -fopenmp
 clean:
-	rm  *.o  $(utils)/*.o
+	rm  *.o  $(utils)/*.o $(utils)/*.mod

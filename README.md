@@ -2,7 +2,7 @@ To do List (from easy to hard)
 
 ~~1. A more concise representation of station pairs with C++ class.~~
 
-~~2. Parallelization of the computation of surface wave travetime and 2-D Frechet kernel. ~~
+~~2. Parallelization of the computation of surface wave travetime and 2-D Frechet kernel.~~
 
 3. Inhomegeneous grid in vertical direction.
 
