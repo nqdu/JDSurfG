@@ -9,104 +9,123 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE globalp
-    use,intrinsic :: iso_c_binding
-    IMPLICIT NONE
-    INTEGER, PARAMETER :: i10=SELECTED_REAL_KIND(6)
-    INTEGER :: checkstat
-    INTEGER, SAVE :: nvx,nvz,nnx,nnz,fom,gdx,gdz
-    INTEGER, SAVE :: vnl,vnr,vnt,vnb,nrnx,nrnz,sgdl,rbint
-    INTEGER, SAVE :: nnxr,nnzr,asgr
-    INTEGER, DIMENSION (:,:), ALLOCATABLE :: nsts,nstsr,srs
-    REAL(KIND=i10), SAVE :: gox,goz,dnx,dnz,dvx,dvz,snb,earth
-    REAL(KIND=i10), SAVE :: goxd,gozd,dvxd,dvzd,dnxd,dnzd
-    REAL(KIND=i10), SAVE :: drnx,drnz,gorx,gorz
-    REAL(KIND=i10), SAVE :: dnxr,dnzr,goxr,gozr
-    REAL(KIND=i10), DIMENSION (:,:), ALLOCATABLE, SAVE :: velv,veln,velnb
-    REAL(KIND=i10), DIMENSION (:,:), ALLOCATABLE, SAVE :: ttn,ttnr
-    !REAL(KIND=i10), DIMENSION (:), ALLOCATABLE, SAVE :: rcx,rcz
-    REAL(KIND=i10), PARAMETER :: pi=3.1415926535898
-    !!!--------------------------------------------------------------
-    !!	modified by Hongjian Fang @ USTC
-    !	real,dimension(:),allocatable,save::rw
-    !	integer,dimension(:),allocatable,save::iw,col
-    !	real,dimension(:,:,:),allocatable::vpf,vsf
-    !	real,dimension(:),allocatable,save::obst,cbst,wt,dtres
-    !!	integer,dimension(:),allocatable,save::cbst_stat
-    !	real,dimension(:,:,:),allocatable,save::sen_vs,sen_vp,sen_rho
-    !!!	real,dimension(:,:,:),allocatable,save::sen_vsRc,sen_vpRc,sen_rhoRc
-    !!!	real,dimension(:,:,:),allocatable,save::sen_vsRg,sen_vpRg,sen_rhoRg
-    !!!	real,dimension(:,:,:),allocatable,save::sen_vsLc,sen_vpLc,sen_rhoLc
-    !!!	real,dimension(:,:,:),allocatable,save::sen_vsLg,sen_vpLg,sen_rhoLg
-    !!!	integer,save:: count1,count2
-    !	integer*8,save:: nar
-    !	integer,save:: iter,maxiter
-    !!!--------------------------------------------------------------
-    !
-    ! nvx,nvz = B-spline vertex values
-    ! dvx,dvz = B-spline vertex separation
-    ! velv(i,j) = velocity values at control points
-    ! nnx,nnz = Number of nodes of grid in x and z
-    ! nnxr,nnzr = Number of nodes of refined grid in x and z
-    ! gox,goz = Origin of grid (theta,phi)
-    ! goxr, gozr = Origin of refined grid (theta,phi)
-    ! dnx,dnz = Node separation of grid in  x and z
-    ! dnxr,dnzr = Node separation of refined grid in x and z
-    ! veln(i,j) = velocity values on a refined grid of nodes
-    ! velnb(i,j) = Backup of veln required for source grid refinement
-    ! ttn(i,j) = traveltime field on the refined grid of nodes
-    ! ttnr(i,j) = ttn for refined grid
-    ! nsts(i,j) = node status (-1=far,0=alive,>0=close)
-    ! nstsr(i,j) = nsts for refined grid
-    ! checkstat = check status of memory allocation
-    ! fom = use first-order(0) or mixed-order(1) scheme
-    ! snb = Maximum size of narrow band as fraction of nnx*nnz
-    ! nrc = number of receivers
-    ! rcx(i),rcz(i) = (x,z) coordinates of receivers
-    ! earth = radius of Earth (in km)
-    ! goxd,gozd = gox,goz in degrees
-    ! dvxd,dvzd = dvx,dvz in degrees
-    ! dnzd,dnzd = dnx,dnz in degrees
-    ! gdx,gdz = grid dicing in x and z
-    ! vnl,vnr,vnb,vnt = Bounds of refined grid
-    ! nrnx,nrnz = Number of nodes in x and z for refined grid
-    ! gorx,gorz = Grid origin of refined grid
-    ! sgdl = Source grid dicing level
-    ! rbint = Ray-boundary intersection (0=no, 1=yes).
-    ! asgr = Apply source grid refinement (0=no,1=yes)
-    ! srs = Source-receiver status (0=no path, 1=path exists)
-    !
-  END MODULE globalp
+  use,intrinsic :: iso_c_binding
+  use omp_lib
+  IMPLICIT NONE
+  INTEGER, PARAMETER :: sp=c_float
+  INTEGER, PARAMETER :: dp=c_double
+  INTEGER(c_int), SAVE :: nvx,nvz,nnx,nnz,fom,gdx,gdz
+  INTEGER(c_int), SAVE :: vnl,vnr,vnt,vnb,nrnx,nrnz,sgdl,rbint
+  INTEGER(c_int), SAVE :: nnxr,nnzr,asgr
+  INTEGER(c_int), DIMENSION (:,:), ALLOCATABLE :: nsts,nstsr,srs
+  REAL(KIND=sp), SAVE :: gox,goz,dnx,dnz,dvx,dvz,snb,earth
+  REAL(KIND=sp), SAVE :: goxd,gozd,dvxd,dvzd,dnxd,dnzd
+  REAL(KIND=sp), SAVE :: drnx,drnz,gorx,gorz
+  REAL(KIND=sp), SAVE :: dnxr,dnzr,goxr,gozr
+  REAL(KIND=sp), DIMENSION (:,:), ALLOCATABLE, SAVE :: velv,veln,velnb
+  REAL(KIND=sp), DIMENSION (:,:), ALLOCATABLE, SAVE :: ttn,ttnr
+  !REAL(KIND=sp), DIMENSION (:), ALLOCATABLE, SAVE :: rcx,rcz
+  REAL(KIND=sp), PARAMETER :: pi=3.1415926535898
+  !!!--------------------------------------------------------------
+  !!	modified by Hongjian Fang @ USTC
+  !	real,dimension(:),allocatable,save::rw
+  !	integer,dimension(:),allocatable,save::iw,col
+  !	real,dimension(:,:,:),allocatable::vpf,vsf
+  !	real,dimension(:),allocatable,save::obst,cbst,wt,dtres
+  !!	integer,dimension(:),allocatable,save::cbst_stat
+  !	real,dimension(:,:,:),allocatable,save::sen_vs,sen_vp,sen_rho
+  !!!	real,dimension(:,:,:),allocatable,save::sen_vsRc,sen_vpRc,sen_rhoRc
+  !!!	real,dimension(:,:,:),allocatable,save::sen_vsRg,sen_vpRg,sen_rhoRg
+  !!!	real,dimension(:,:,:),allocatable,save::sen_vsLc,sen_vpLc,sen_rhoLc
+  !!!	real,dimension(:,:,:),allocatable,save::sen_vsLg,sen_vpLg,sen_rhoLg
+  !!!	integer,save:: count1,count2
+  !	integer*8,save:: nar
+  !	integer,save:: iter,maxiter
+  !!!--------------------------------------------------------------
+  !
+  ! nvx,nvz = B-spline vertex values
+  ! dvx,dvz = B-spline vertex separation
+  ! velv(i,j) = velocity values at control points
+  ! nnx,nnz = Number of nodes of grid in x and z
+  ! nnxr,nnzr = Number of nodes of refined grid in x and z
+  ! gox,goz = Origin of grid (theta,phi)
+  ! goxr, gozr = Origin of refined grid (theta,phi)
+  ! dnx,dnz = Node separation of grid in  x and z
+  ! dnxr,dnzr = Node separation of refined grid in x and z
+  ! veln(i,j) = velocity values on a refined grid of nodes
+  ! velnb(i,j) = Backup of veln required for source grid refinement
+  ! ttn(i,j) = traveltime field on the refined grid of nodes
+  ! ttnr(i,j) = ttn for refined grid
+  ! nsts(i,j) = node status (-1=far,0=alive,>0=close)
+  ! nstsr(i,j) = nsts for refined grid
+  ! checkstat = check status of memory allocation
+  ! fom = use first-order(0) or mixed-order(1) scheme
+  ! snb = Maximum size of narrow band as fraction of nnx*nnz
+  ! nrc = number of receivers
+  ! rcx(i),rcz(i) = (x,z) coordinates of receivers
+  ! earth = radius of Earth (in km)
+  ! goxd,gozd = gox,goz in degrees
+  ! dvxd,dvzd = dvx,dvz in degrees
+  ! dnzd,dnzd = dnx,dnz in degrees
+  ! gdx,gdz = grid dicing in x and z
+  ! vnl,vnr,vnb,vnt = Bounds of refined grid
+  ! nrnx,nrnz = Number of nodes in x and z for refined grid
+  ! gorx,gorz = Grid origin of refined grid
+  ! sgdl = Source grid dicing level
+  ! rbint = Ray-boundary intersection (0=no, 1=yes).
+  ! asgr = Apply source grid refinement (0=no,1=yes)
+  ! srs = Source-receiver status (0=no path, 1=path exists)
+  !
+
+  ! modified by Nanqiao Du for parallelization
+  !$omp threadprivate(nvx,nvz,nnx,nnz,fom,gdx,gdz)
+  !$omp threadprivate(vnl,vnr,vnt,vnb,nrnx,nrnz,sgdl,rbint)
+  !$omp threadprivate(nnxr,nnzr,asgr)
+  !$omp threadprivate(nsts,nstsr,srs)
+  !$omp threadprivate(gox,goz,dnx,dnz,dvx,dvz,snb,earth)
+  !$omp threadprivate(goxd,gozd,dvxd,dvzd,dnxd,dnzd)
+  !$omp threadprivate(drnx,drnz,gorx,gorz)
+  !$omp threadprivate(dnxr,dnzr,goxr,gozr)
+  !$omp threadprivate(velv,veln,velnb)
+  !$omp threadprivate(ttn,ttnr)
   
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! TYPE: MODULE
-  ! CODE: FORTRAN 90
-  ! This module contains all the subroutines used to calculate
-  ! the first-arrival traveltime field through the grid.
-  ! Subroutines are:
-  ! (1) travel
-  ! (2) fouds1
-  ! (3) fouds2
-  ! (4) addtree
-  ! (5) downtree
-  ! (6) updtree
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  MODULE traveltime
-    USE globalp
-    IMPLICIT NONE
-    INTEGER ntr
-    TYPE backpointer
-      INTEGER(KIND=2) :: px,pz
-    END TYPE backpointer
-    TYPE(backpointer), DIMENSION (:), ALLOCATABLE :: btg
-    !
-    ! btg = backpointer to relate grid nodes to binary tree entries
-    ! px = grid-point in x
-    ! pz = grid-point in z
-    ! ntr = number of entries in binary tree
-    !
+END MODULE globalp
   
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! TYPE: MODULE
+! CODE: FORTRAN 90
+! This module contains all the subroutines used to calculate
+! the first-arrival traveltime field through the grid.
+! Subroutines are:
+! (1) travel
+! (2) fouds1
+! (3) fouds2
+! (4) addtree
+! (5) downtree
+! (6) updtree
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+MODULE traveltime
+  USE globalp
+  use omp_lib
+  IMPLICIT NONE
+  INTEGER ntr
+  TYPE backpointer
+    !INTEGER(KIND=2) :: px,pz
+  INTEGER(c_int) :: px,pz
+  END TYPE backpointer
+  TYPE(backpointer), DIMENSION (:), ALLOCATABLE :: btg
+  ! modified by Nanqiao Du
+  !$omp threadprivate(ntr,btg)
+
+  !
+  ! btg = backpointer to relate grid nodes to binary tree entries
+  ! px = grid-point in x
+  ! pz = grid-point in z
+  ! ntr = number of entries in binary tree
+  !
+  public::travel
   CONTAINS
   
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -119,8 +138,8 @@ MODULE globalp
     SUBROUTINE travel(scx,scz,urg)
       IMPLICIT NONE
       INTEGER :: isx,isz,sw,i,j,ix,iz,urg,swrg
-      REAL(KIND=i10) :: scx,scz,vsrc,dsx,dsz,ds
-      REAL(KIND=i10), DIMENSION (2,2) :: vss
+      REAL(KIND=sp) :: scx,scz,vsrc,dsx,dsz,ds
+      REAL(KIND=sp), DIMENSION (2,2) :: vss
       ! isx,isz = grid cell indices (i,j,k) which contains source
       ! scx,scz = (r,x,y) location of source
       ! sw = a switch (0=off,1=on)
@@ -328,9 +347,9 @@ MODULE globalp
     SUBROUTINE fouds1(iz,ix)
       IMPLICIT NONE
       INTEGER :: j,k,ix,iz,tsw1,swsol
-      REAL(KIND=i10) :: trav,travm,slown,tdsh,tref
-      REAL(KIND=i10) :: a,b,c,u,v,em,ri,risti
-      REAL(KIND=i10) :: rd1
+      REAL(KIND=sp) :: trav,travm,slown,tdsh,tref
+      REAL(KIND=sp) :: a,b,c,u,v,em,ri,risti
+      REAL(KIND=sp) :: rd1
       !
       ! ix = NS position of node coordinate for determination
       ! iz = EW vertical position of node coordinate for determination
@@ -419,8 +438,8 @@ MODULE globalp
       IMPLICIT NONE
       INTEGER :: j,k,j2,k2,ix,iz,tsw1
       INTEGER :: swj,swk,swsol
-      REAL(KIND=i10) :: trav,travm,slown,tdsh,tref,tdiv
-      REAL(KIND=i10) :: a,b,c,u,v,em,ri,risti,rd1
+      REAL(KIND=sp) :: trav,travm,slown,tdsh,tref,tdiv
+      REAL(KIND=sp) :: a,b,c,u,v,em,ri,risti,rd1
       !
       ! ix = NS position of node coordinate for determination
       ! iz = EW vertical position of node coordinate for determination
@@ -647,7 +666,7 @@ MODULE globalp
     SUBROUTINE downtree
       IMPLICIT NONE
       INTEGER :: tpp,tpc
-      REAL(KIND=i10) :: rd1,rd2
+      REAL(KIND=sp) :: rd1,rd2
       TYPE(backpointer) :: exch
       !
       ! tpp = tree position of parent
@@ -758,10 +777,10 @@ MODULE globalp
     !subroutine gridder()
     USE globalp
     IMPLICIT NONE
-    INTEGER :: i,j,l,m,i1,j1,conx,conz,stx,stz
-    REAL(KIND=i10) :: u,sumi,sumj
-    REAL(KIND=i10), DIMENSION(:,:), ALLOCATABLE :: ui,vi
-    !real(kind=i10):: ui(gdx+1,4),vi(gdz+1,4)
+    INTEGER :: i,j,l,m,i1,j1,conx,conz,stx,stz,checkstat
+    REAL(KIND=sp) :: u,sumi,sumj
+    REAL(KIND=sp), DIMENSION(:,:), ALLOCATABLE :: ui,vi
+    !real(kind=sp):: ui(gdx+1,4),vi(gdz+1,4)
     !CHARACTER (LEN=30) :: grid
     !
     ! u = independent parameter for b-spline
@@ -771,7 +790,7 @@ MODULE globalp
     ! sumi,sumj = summation variables for computing b-spline
     !
     !C---------------------------------------------------------------
-    double precision pv(*)
+    real(dp),INTENT(IN) ::  pv(*)
     !integer count1
     !C---------------------------------------------------------------
     ! Open the grid file and read in the velocity grid.
@@ -860,9 +879,9 @@ MODULE globalp
     USE globalp
     INTEGER :: i,j,k,l,i1,j1,st1,st2,nrzr,nrxr
     INTEGER :: origx,origz,conx,conz,idm1,idm2
-    REAL(KIND=i10) :: u,v
-    REAL(KIND=i10), DIMENSION (4) :: sum
-    REAL(KIND=i10), DIMENSION(gdx*sgdl+1,gdz*sgdl+1,4) :: ui,vi
+    REAL(KIND=sp) :: u,v
+    REAL(KIND=sp), DIMENSION (4) :: sum
+    REAL(KIND=sp), DIMENSION(gdx*sgdl+1,gdz*sgdl+1,4) :: ui,vi
     !
     ! nrxr,nrzr = grid refinement level for source grid in x,z
     ! origx,origz = local origin of refined source grid
@@ -933,19 +952,20 @@ MODULE globalp
   SUBROUTINE srtimes(scx,scz,rcx1,rcz1,cbst1)
     USE globalp
     IMPLICIT NONE
-    INTEGER :: i,k,l,irx,irz,sw,isx,isz,csid
+    real(sp)  :: scx,scz,rcx1,rcz1
+    real(sp),intent(inout) :: cbst1
+    INTEGER :: k,l,irx,irz,sw,isx,isz
     INTEGER, PARAMETER :: noray=0,yesray=1
-    INTEGER, PARAMETER :: i5=SELECTED_REAL_KIND(6)
-    REAL(KIND=i5) :: trr
-    REAL(KIND=i5), PARAMETER :: norayt=0.0
-    REAL(KIND=i10) :: drx,drz,produ,scx,scz
-    REAL(KIND=i10) :: rcx1,rcz1,cbst1
-    REAL(KIND=i10) :: sred,dpl,rd1,vels,velr
-    REAL(KIND=i10), DIMENSION (2,2) :: vss
+    !INTEGER, PARAMETER :: i5=SELECTED_REAL_KIND(6)
+    REAL(sp) :: trr
+    REAL(KIND=sp), PARAMETER :: norayt=0.0
+    REAL(KIND=sp) :: drx,drz,produ
+    REAL(KIND=sp) :: sred,dpl,rd1,vels,velr
+    REAL(KIND=sp), DIMENSION (2,2) :: vss
     !!------------------------------------------------------
     !	modified by Hongjian Fang @ USTC
-    integer no_p,nsrc
-    real dist
+    !integer no_p,nsrc
+    !real dist
     !	real cbst(*) !note that the type difference(kind=i5 vs real)
     !	integer cbst_stat(*)
     !!------------------------------------------------------
@@ -1068,24 +1088,24 @@ MODULE globalp
   SUBROUTINE rpaths(scx,scz,fdm,surfrcx,surfrcz,igr,Tid,writepath)
     USE globalp
     IMPLICIT NONE
-    INTEGER, PARAMETER :: i5=SELECTED_REAL_KIND(5,10)
+    !INTEGER, PARAMETER :: i5=SELECTED_REAL_KIND(5,10)
     INTEGER, PARAMETER :: nopath=0
-    INTEGER :: i,j,k,l,m,n,ipx,ipz,ipxr,ipzr,nrp,sw
+    INTEGER :: j,k,l,m,n,ipx,ipz,ipxr,ipzr,nrp,sw,checkstat
     !fang!INTEGER :: wrgf,cfd,csid,ipxo,ipzo,isx,isz
     INTEGER :: ipxo,ipzo,isx,isz
     INTEGER :: ivx,ivz,ivxo,ivzo,nhp,maxrp
-    INTEGER :: ivxt,ivzt,ipxt,ipzt,isum,igref
+    INTEGER :: ivxt,ivzt,ipxt,ipzt,igref
     INTEGER, DIMENSION (4) :: chp
-    REAL(KIND=i5) :: rayx,rayz
-    REAL(KIND=i10) :: dpl,rd1,rd2,xi,zi,vel,velo
-    REAL(KIND=i10) :: v,w,rigz,rigx,dinc,scx,scz
-    REAL(KIND=i10) :: dtx,dtz,drx,drz,produ,sred
-    REAL(KIND=i10), DIMENSION (:), ALLOCATABLE :: rgx,rgz
+    REAL(KIND=sp) :: rayx,rayz
+    REAL(KIND=sp) :: dpl,rd1,rd2,xi,zi,vel,velo
+    REAL(KIND=sp) :: v,w,rigz,rigx,dinc,scx,scz
+    REAL(KIND=sp) :: dtx,dtz,drx,drz,produ,sred
+    REAL(KIND=sp), DIMENSION (:), ALLOCATABLE :: rgx,rgz
     !fang!REAL(KIND=i5), DIMENSION (:,:), ALLOCATABLE :: fdm
-    REAL(KIND=i10), DIMENSION (4) :: vrat,vi,wi,vio,wio
+    REAL(KIND=sp), DIMENSION (4) :: vrat,vi,wi,vio,wio
     !fang!------------------------------------------------
-    real fdm(0:nvz+1,0:nvx+1)
-    REAL(KIND=i10) surfrcx,surfrcz
+    real(sp),INTENT(inout)  :: fdm(0:nvz+1,0:nvx+1)
+    REAL(KIND=sp) surfrcx,surfrcz
     
     !modified by nqdu
     character*100 outfile,outpath
@@ -1175,7 +1195,7 @@ MODULE globalp
     !
     !  If path does not exist, then cycle the loop
     !
-    fdm=0
+    fdm=0.0
     !fang!   IF(cfd.EQ.1)THEN
     !fang!      fdm=0.0
     !fang!   ENDIF
@@ -1643,9 +1663,9 @@ MODULE globalp
     USE globalp
     IMPLICIT NONE
     INTEGER :: i,j
-    REAL(KIND=i10) :: dsx,dsz,biv
-    REAL(KIND=i10), DIMENSION(2,2) :: nv
-    REAL(KIND=i10) :: produ
+    REAL(KIND=sp) :: dsx,dsz,biv
+    REAL(KIND=sp), DIMENSION(2,2) :: nv
+    REAL(KIND=sp) :: produ
     !
     ! nv = four node vertex values
     ! dsx,dsz = distance between internal point and top left node

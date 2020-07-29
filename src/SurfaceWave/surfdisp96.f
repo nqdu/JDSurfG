@@ -52,7 +52,8 @@ c     15 DEC 2019 - modified by Nanqiao Du at IGGCAS
 c       remove NP and NL restrictions
 c-----
        subroutine surfdisp96(thkm,vpm,vsm,rhom,nlayer,iflsph,iwave,
-     &                       mode,igr,kmax,t,cg)
+     &                       mode,igr,kmax,t,cg)bind(c,name="surfdisp96")
+        use,intrinsic :: iso_c_binding
         parameter(LER=0,LIN=5,LOT=66)
         integer NL, NL2, NLAY
 c        parameter(NL=200,NLAY=200,NL2=NL+NL)
@@ -78,20 +79,22 @@ c     t - period vector (t(NP))
 c     cg - output phase or group velocities (vector,cg(NP))
 c----- 
 c        real*4 thkm(NLAY),vpm(NLAY),vsm(NLAY),rhom(NLAY)
-        integer nlayer,iflsph,iwave,mode,igr,kmax
-        real*4 thkm(nlayer),vpm(nlayer),vsm(nlayer),rhom(nlayer)
-        double precision twopi,one,onea
-        double precision cc,c1,clow,cm,dc,t1
+        integer(c_int),value,INTENT(IN) :: nlayer,iflsph,iwave,mode,igr,kmax
+        real(c_float),INTENT(IN):: thkm(nlayer),vpm(nlayer),vsm(nlayer),rhom(nlayer)
+        real(c_double),INTENT(IN) :: t(kmax)
+        real(c_double),INTENT(INOUT) :: cg(kmax)
+        real(c_double) :: twopi,one,onea
+        real(c_double) :: cc,c1,clow,cm,dc,t1
         !double precision t(NP),c(NP),cb(NP),cg(NP)
-        double precision t(kmax),c(kmax),cb(kmax),cg(kmax)
+        real(c_double) ::c(kmax),cb(kmax)
 c       real*4 d(NL),a(NL),b(NL),rho(NL),rtp(NL),dtp(NL),btp(NL)
-        real d(nlayer),a(nlayer),b(nlayer),rho(nlayer),rtp(nlayer),dtp(nlayer),btp(nlayer)
+        real(c_float) :: d(nlayer),a(nlayer),b(nlayer),rho(nlayer)
+        real(c_float ) :: rtp(nlayer),dtp(nlayer),btp(nlayer)
 c        common/modl/ d,a,b,rho,rtp,dtp,btp     
 c        common/para/ mmax,llw,twopi
-        integer*4 iverb(2)
-        integer*4 llw
-        integer*4 nsph, ifunc, idispl, idispr, is, ie
-        real*4 sone0, ddc0, h0, sone, ddc, h
+        integer(c_int) :: iverb(2),llw
+        integer(c_int):: nsph, ifunc, idispl, idispr, is, ie
+        real(c_float):: sone0, ddc0, h0, sone, ddc, h
 
 c    maximum number of layers in the model
         mmax = nlayer
@@ -106,7 +109,7 @@ c     save current values
             d(i) = thkm(i)
             rho(i) = rhom(i)
 c           print *,d(i), b(i)
-   39   continue       
+   39   continue
         
         if(iwave.eq.1)then
            idispl = kmax

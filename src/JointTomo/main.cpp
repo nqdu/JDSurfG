@@ -1,7 +1,7 @@
 #include<iostream>
 #include<string>
 #include<fstream>
-#include"JointTomo.hpp"
+#include"tomography.hpp"
 using namespace Eigen;
 
 void print_mean_and_rms(VectorXf a,std::string info)
@@ -47,11 +47,15 @@ int main(int argc, char* argv[]){
             modtrue = argv[7];
         }
     }
-    else{
+    else if(argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
         std::string info = "./this paramfile surfdatafile ";
         info += "gravdatafile gravmat initmod (refmod) (truemod)"; 
         std::cout <<info << std::endl;
+        exit(0);
+    }
+    else{
+        std::cout <<"Please run this executable file -h for help"<<std::endl;
         exit(0);
     }
     std::cout <<std::endl;
@@ -66,14 +70,13 @@ int main(int argc, char* argv[]){
     tomo.readdata(paramfile,modfile,surfdata,gravdata,gravmat,refmod,modtrue);
 
     // initialize some parameters
-    VectorXf dv(tomo.n); // variation of S-wave velocity for every iteration
     VectorXf dsyn(tomo.surf.num_data); // synthetic traveltime for every iteration
     VectorXf dg(tomo.obsg.np); // synthetic gravity for every iteration
     Tensor<float,3> vsf = tomo.mod.vs * 1.0f; // set inversion model to initial 
 
    // checkerboard test if required
     if(tomo.param.ifsyn){
-        std::cout<<" Checkerboard Resolution Test Begin ..." << std::endl;
+        std::cout<<"Checkerboard Resolution Test Begin ..." << std::endl;
         tomo.checkerboard();
     }
 
@@ -84,23 +87,27 @@ int main(int argc, char* argv[]){
     int nx = tomo.mod.nx, ny = tomo.mod.ny,nz=tomo.mod.nz;
     std::string resfile="results/mod_iter"+ std::to_string(0) +  ".dat";
     outfile.open(resfile);
-    for(int k=0;k<nz-1;k++){
-    for(int j=0;j<ny-2;j++){
-    for(int i=0;i<nx-2;i++){
-        outfile << tomo.mod.lon(j+1) << " " <<  tomo.mod.lat(i+1) << " " 
-                << tomo.mod.dep(k) << " " << vsf(i+1,j+1,k) << std::endl;
+    for(int k=0;k<nz;k++){
+    for(int j=0;j<ny;j++){
+    for(int i=0;i<nx;i++){
+        outfile << tomo.mod.lon(j) << " " <<  tomo.mod.lat(i) << " " 
+                << tomo.mod.dep(k) << " " << vsf(i,j,k) << std::endl;
     }}}
     outfile.close();
 
-    // inversion begin
+    // remove mean of gravity data
     Map<VectorXf> Gr(tomo.obsg.Gr,tomo.obsg.np);
+    float mean = Gr.sum() / tomo.obsg.np;
+    Gr.array() -= mean;
+    
+    // inversion begin
     int nt = tomo.surf.num_data;
     int ng = tomo.obsg.np;
     std::string info;
     for(int iter =0;iter < tomo.param.maxiter;iter++){
         std::cout << std::endl;
         std::cout << "Iteration " + std::to_string(iter+1) << std::endl;
-        tomo.inversion(vsf,dv,dsyn,dg);
+        tomo.inversion(vsf,dsyn,dg);
 
         // compute mean and rms of residuals
         VectorXf res(tomo.num_data);
@@ -108,29 +115,29 @@ int main(int argc, char* argv[]){
         res.segment(nt,ng) = Gr - dg;
 
         // for traveltime
-        info = "mean and rms of traveltime resuduals before this iteration(s):";
+        info = "mean and rms of traveltime residuals before this iteration(s):";
         print_mean_and_rms(res.segment(0,nt),info);
         
         // for gravity
-        info="mean and rms of gravity resuduals before this iteration(mGal):";
+        info="mean and rms of gravity residuals before this iteration(mGal):";
         print_mean_and_rms(res.segment(nt,ng),info);
 
         // for joint residuals
-        info="mean and rms of joint resuduals before this iteration:";
+        info="mean and rms of joint residuals before this iteration:";
         print_mean_and_rms(res,info);
 
         // save current synthetics
-        std::string resfile = "results/res"+std ::to_string(iter)+".dat";
+        std::string resfile = "results/res_surf"+std ::to_string(iter)+".dat";
         outfile.open(resfile);
-        for(int i=0;i<tomo.num_data;i++){
-            outfile << tomo.surf.dist(i) << " " << tomo.surf.obst(i) << " "\
+        for(int i=0;i<nt;i++){
+            outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
                    << dsyn(i) <<std::endl;
         }
         outfile.close();
 
         resfile = "results/res_grav"+std ::to_string(iter)+".dat";
         outfile.open(resfile);
-        for(int i=0;i<tomo.obsg.np;i++){
+        for(int i=0;i<ng;i++){
             outfile << Gr(i) << " "<< dg(i) <<std::endl;
         }
         outfile.close();
@@ -138,11 +145,11 @@ int main(int argc, char* argv[]){
         // save current model
         resfile="results/mod_iter"+std ::to_string(iter+1)+".dat";
         outfile.open(resfile);
-        for(int k=0;k<nz-1;k++){
-        for(int j=0;j<ny-2;j++){
-        for(int i=0;i<nx-2;i++){
-            outfile << tomo.mod.lon(j+1) << " " <<  tomo.mod.lat(i+1) << " " 
-                    << tomo.mod.dep(k) << " " << vsf(i+1,j+1,k) << std::endl;
+        for(int k=0;k<nz;k++){
+        for(int j=0;j<ny;j++){
+        for(int i=0;i<nx;i++){
+            outfile << tomo.mod.lon(j) << " " <<  tomo.mod.lat(i) << " " 
+                    << tomo.mod.dep(k) << " " << vsf(i,j,k) << std::endl;
         }}}
         outfile.close();
     }
@@ -151,23 +158,42 @@ int main(int argc, char* argv[]){
     std::cout <<std::endl;
     std::cout << " synthetic traveltime for the result model " << std::endl;
     tomo.forward(vsf,dsyn,dg);
+    mean = dg.sum() / dg.size();
+    dg.array() -= mean;
 
     // compute mean and rms of residuals
     VectorXf res(tomo.num_data);
     res.segment(0,nt) = tomo.surf.obst - dsyn;
     res.segment(nt,ng) = Gr - dg;
     // for traveltime
-    info = "mean and rms of traveltime resuduals after inversion(s):";
+    info = "mean and rms of traveltime residuals after inversion(s):";
     print_mean_and_rms(res.segment(0,nt),info);
     
     // for gravity
-    info="mean and rms of gravity resuduals after inversion (mGal):";
+    info="mean and rms of gravity residuals after inversion (mGal):";
     print_mean_and_rms(res.segment(nt,ng),info);
 
     // for joint residuals
-    info="mean and rms of joint resuduals after inversion:";
+    info="mean and rms of joint residuals after inversion:";
     print_mean_and_rms(res,info);
     std::cout << std::endl;
+
+    // save synthetics for last iteration
+    int maxiter = tomo.param.maxiter;
+    resfile = "results/res_surf"+std ::to_string(maxiter)+".dat";
+    outfile.open(resfile);
+    for(int i=0;i<nt;i++){
+        outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
+                << dsyn(i) <<std::endl;
+    }
+    outfile.close();
+
+    resfile = "results/res_grav"+std ::to_string(maxiter)+".dat";
+    outfile.open(resfile);
+    for(int i=0;i<ng;i++){
+        outfile << Gr(i) << " "<< dg(i) <<std::endl;
+    }
+    outfile.close();
 
     std::cout << "Program finishes Successfully!" << std::endl;
     return 0;

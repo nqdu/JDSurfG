@@ -1,11 +1,57 @@
-#include"JointTomo.hpp"
-#include"delsph.hpp"
-#include"calsurf.hpp"
-#include"gaussian.hpp"
-#include"empirical.hpp"
-#include"const.hpp"
+#include"tomography.hpp"
 #include<fstream>
-using namespace Eigen;
+#include"utils.hpp"
+#include"openmp.hpp"
+using Eigen::Tensor;
+using Eigen::VectorXf;
+
+// mod3d defined
+void MOD3d:: gravity(coo_matrix<float> &A,Tensor<float,3> &vsf,VectorXf &dgsyn){
+    float rho,a,b; // density, alpha, beta
+
+    if(vs.size()!= vsf.size()){
+        std::cout<<"the dimension dismatch!" << std::endl;
+        exit(0);
+    }
+    int size = (ny-2) * (nx-2) * (nz-1);
+    VectorXf drho(size);
+    dgsyn.setZero();
+    for(int k=0;k<nz-1;k++){
+        for(int j=0;j< ny-2;j++){
+            for(int i=0;i<nx-2;i++){
+                b = vsf(i+1,j+1,k);
+                int n = k * (ny-2) * (nx-2) + j *(nx-2) + i;
+                empirical_relation(&b,&a,&rho);
+                drho(n) = rho;
+                b = vs(i+1,j+1,k);
+                empirical_relation(&b,&a,&rho);
+                drho(n) -= rho;
+            }
+        }
+    }
+    A.aprod(1,drho.data(),dgsyn.data());
+}
+
+
+int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
+                std::vector<float> &rcz,std::vector<float> &v)
+{
+    while(!feof(fp)){
+        if(fgets(line,300*sizeof(char),fp)==NULL)
+            break;
+        if(line[0] == '#') break;
+        float stalat,stalon,velvalue,dist1;
+        sscanf(line,"%f%f%f",&stalat,&stalon,&velvalue);
+        stalat=(90.0-stalat)*pi/180.0;
+        stalon=stalon*pi/180.0;
+        rcx.push_back(stalat);
+        rcz.push_back(stalon);
+        v.push_back(velvalue);
+    } 
+    int nr = rcx.size();
+
+    return nr;   
+}
 
 // compute std of a vector
 float dnrm2(float *a,int n)
@@ -34,9 +80,6 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     std ::istringstream info;    
     int nsrc;
     infile.open(paramfile);
-    for(int i=0;i<4;i++){
-        getline(infile,line);
-    }
 
     getline(infile,line);
     sscanf(line.c_str(),"%d%d%d",&mod.nx,&mod.ny,&mod.nz);
@@ -46,9 +89,6 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
 
     getline(infile,line);
     sscanf(line.c_str(),"%f%f",&mod.dvxd,&mod.dvzd);
-
-    getline(infile,line);
-    sscanf(line.c_str(),"%d",&nsrc);
 
     getline(infile,line);
     sscanf(line.c_str(),"%f%f",&param.smooth,&param.damp);
@@ -62,14 +102,14 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     getline(infile,line);
     sscanf(line.c_str(),"%d",&param.maxiter);
 
-    getline(infile,line);
-    sscanf(line.c_str(),"%f",&param.spra);
+    //getline(infile,line);
+    //sscanf(line.c_str(),"%f",&param.spra);
 
     // output some infomation to screen
     printf("model origin: latitude,longitude\n");
     printf("%7.1f %7.1f\n",mod.goxd,mod.gozd);
     printf("model grid spacing: dlat,dlon\n");
-    printf("   %g %g\n",mod.dvxd,mod.dvzd);
+    printf("   %g   %g\n",mod.dvxd,mod.dvzd);
     printf("model dimension: nlat,nlon,nz\n");
     printf("%5d %5d %5d\n",mod.nx,mod.ny,mod.nz);
 
@@ -143,42 +183,22 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     sscanf(line.c_str(),"%d",&param.ifsyn);
 
     getline(infile,line);
-    sscanf(line.c_str(),"%f",&param.noiselevel);
+    sscanf(line.c_str(),"%f%f",&param.noiselevel,&param.noiselevel1);
 
     getline(infile,line);
     sscanf(line.c_str(),"%f",&param.p);
 
     getline(infile,line);
-    sscanf(line.c_str(),"%f",&param.weight1);
-
-    getline(infile,line);
-    sscanf(line.c_str(),"%f",&param.weight2);
+    sscanf(line.c_str(),"%f%f",&param.weight1,&param.weight2);
 
     // allocate data parameters
     int nx = mod.nx,ny = mod.ny, nz= mod.nz;
-    surf.n = (nx-2) * (ny-2) * (nz -1);
-    n = surf.n;
-    surf.kmax = surf.kmaxRc + surf.kmaxRg + surf.kmaxLc + surf.kmaxLg;
-    int kmax = surf.kmax;
-    modref.nx = mod.nx; modref.ny = mod.ny;
-    modref.nz = mod.nz;
-    mod.dep.resize(nz);modref.dep.resize(nz);
+    surf.kmax = kmaxRc + kmaxRg + kmaxLc + kmaxLg;
+    mod.dep.resize(nz);
     mod.lon.resize(ny); mod.lat.resize(nx);
-    modref.lon.resize(ny); modref.lat.resize(nx);
     mod.vs.resize(nx,ny,nz);
-    modref.vs.resize(nx,ny,nz);
-
+    n  = (nx-2) * (ny -2) * (nz -1 );
     if(param.ifsyn) vstrue.resize(nx,ny,nz);
-    surf.scxf.resize(nsrc,kmax);
-    surf.sczf.resize(nsrc,kmax);
-    surf.rcxf.resize(nsrc,nsrc,kmax);
-    surf.rczf.resize(nsrc,nsrc,kmax);
-    surf.periods.resize(nsrc,kmax);
-    surf.wavetype.resize(nsrc,kmax);
-    surf.nrc1.resize(nsrc,kmax);
-    surf.nsrc1.resize(kmax);
-    surf.igrt.resize(nsrc,kmax);
-
     // renew lon and lat
     for(int i=0;i<ny;i++) mod.lon(i) = mod.gozd + i * mod.dvzd;
     for(int i=0;i<nx;i++) mod.lat(i) = mod.goxd - i * mod.dvxd;
@@ -186,85 +206,75 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     infile.close();
 
     // step2 :read surface wave traveltime data
+     // read surface wave traveltime data
     char line1[300];
-    float *obs = new float [nsrc * nsrc *kmax];
-    float *dis = new float [nsrc* nsrc * kmax];
 
-    int steprc=0,steps=0,knum=0,knumo;
     char dummy;
     float sta1_lat,sta1_lon,sta2_lat,sta2_lon,velvalue,dist1;
     int wavetp,veltp,period,maxnar;
     int dall=0;
-    knumo=99999;
 
     FILE *fp;
     if((fp=fopen(surfdata.c_str(),"r"))==NULL){
         std::cout <<"cannot open file" << std::endl;
         exit(0);
     }
+    if(fgets(line1,300*sizeof(char),fp)==NULL){
+        std::cout <<"cannot read file" << std::endl;
+        exit(0);
+    }
     while(!feof(fp)){
-        // read one line
-        if(fgets(line1,300*sizeof(char),fp)==NULL)
-            break;
 
-        // if read the source term
-        if(line1[0]=='#'){
-            sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
+        // extract source station information
+        sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
+        sta1_lat= (90.0-sta1_lat)*pi/180.0;
+        sta1_lon *= pi/180.0;
+        std::string wtp;
+        if ( wavetp==2 && veltp==0 ) 
+            wtp="Rc";
+        else if ( wavetp==2 && veltp==1 ) 
+            wtp="Rg";
+        else if ( wavetp==1 && veltp==0 ) 
+            wtp="Lc";
+        else
+            wtp="Lg";
+        std::vector<float> rcx,rcz,v;
+        int nr = read_receiver(fp,line1,rcx,rcz,v);
 
-            // change period index according to wavetype and velotype
-            if ( wavetp==2 && veltp==0 ) 
-                knum = period-1;
-            else if ( wavetp==2 && veltp==1 ) 
-                knum = period -1 +kmaxRc;
-            else if ( wavetp==1 && veltp==0 ) 
-                knum = period - 1 + kmaxRc + kmaxRg;
-            else
-                knum = period -1 + kmaxRc + kmaxRg + kmaxLc;
-            
-            if (knum!=knumo) // if get a new period, set number of source=0
-                steps=0;
-            steprc=0; // init number of receivers
-            sta1_lat= (90.0-sta1_lat)*pi/180.0;
-            sta1_lon *= pi/180.0;
-            surf.scxf(steps,knum) = sta1_lat;
-            surf.sczf(steps,knum) = sta1_lon;
-            surf.periods(steps,knum) = period;
-            surf.wavetype(steps,knum) = wavetp;
-            surf.igrt(steps,knum) = veltp;
-            surf.nsrc1(knum)=steps+1;
-            knumo=knum;
-            steps+=1;
+        // init station pair
+        StationPair pair(wtp,dall,period-1,nr,sta1_lat,sta1_lon);
+        for(int i=0;i<nr;i++){
+            float dist;
+            pair.rcx[i] = rcx[i];
+            pair.rcz[i] = rcz[i];
+            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],&dist);
+            pair.dist[i] = dist;
+            pair.obstime[i] = dist / v[i];
+            dall ++ ;
+            //std::cout << pair.obstime[i] << std::endl;
         }
-        else{
-            sscanf(line1,"%f%f%f",&sta2_lat,&sta2_lon,&velvalue);
-            sta2_lat=(90.0-sta2_lat)*pi/180.0;
-            sta2_lon=sta2_lon*pi/180.0;
-            surf.rcxf(steprc,steps-1,knum) = sta2_lat;
-            surf.rczf(steprc,steps-1,knum) = sta2_lon;
-            delsph(sta1_lat,sta1_lon,sta2_lat,sta2_lon,dis+dall);
-            obs[dall] = dis[dall] / velvalue;
-            dall++;
-            surf.nrc1(steps-1,knum) = steprc + 1;
-            steprc+=1;
-        }
+        surf.Pairs.push_back(pair);
     }
 
     // print data information on screen
     fclose(fp);
     std::cout<<"The number of traveltime measurements is "<<dall<<std::endl;
     surf.num_data = dall;
-
-    // allocate space for dist and obst
-    surf.obst.resize(dall); surf.dist.resize(dall);
-    for(int i=0;i<dall;i++){
-        surf.obst(i) = obs[i];
-        surf.dist(i) = dis[i];
+    num_data = dall;
+    surf.obst.resize(dall);
+    surf.sta_dist.resize(dall);
+    int count = 0;
+    for(int i=0;i<surf.Pairs.size();i++){
+        for(int j=0;j<surf.Pairs[i].nr;j++){
+            surf.obst(count) = surf.Pairs[i].obstime[j];
+            surf.sta_dist(count) = surf.Pairs[i].dist[j];
+            count += 1;
+        }
     }
-    delete[] dis; delete[] obs;
 
-    // step3 : read gravity data
+    // step3 : read gravity data and remove average value
     obsg.read_obs_data(gravdata);
-    std::cout <<"no. of gravity measurements " <<obsg.np << std::endl;
+    std::cout <<"The number of gravity measurements " <<obsg.np << std::endl;
     num_data = surf.num_data + obsg.np;
 
     // step4: read initial model
@@ -301,6 +311,7 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     }
 
     // step6: read refmodel
+    modref = mod;
    if(refmod!="None"){
         std::cout<<"the gravity reference model is " + refmod <<std::endl;
         infile.open(refmod);
@@ -316,8 +327,8 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
         infile.close();
     }
     else{
-        std::cout<<"no reference model is given, so the average of \
-                    initial model is used" << std::endl;
+        std::cout<<"no reference model is given, so the average of\
+ initial model is used" << std::endl;
         for(int k=0;k<mod.nz;k++){
             float mean = 0.0;
             for(int j=0;j<mod.ny-2;j++){
@@ -335,17 +346,15 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     }
     
     //step7 : read gravity matrix
-    // read gravity matrix
-    fp=fopen(gravmat.c_str(),"r");
+    std::cout << "reading gravity matrix" << std::endl;
     int nar = 0;
-    std::cout << "reading gravity forward matrix ..."<<std::endl;
-    while(!feof(fp)){
-        // read one line
-        if(fgets(line1,300*sizeof(char),fp)==NULL)
-            break;
-        nar ++;
+    FILE *pin;
+    if((pin=popen(("wc -l " + gravmat).c_str(), "r"))==NULL){
+        std::cout << "cannot open file "<< gravmat << std::endl;
+        exit(0);
     }
-    fclose(fp);
+    int flag = fscanf(pin,"%d",&nar);
+    pclose(pin);
     gmat.initialize(obsg.np,n,nar);
     fp=fopen(gravmat.c_str(),"r");
     for(int i=0;i<nar;i++){
@@ -356,7 +365,7 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
 
 void JointTomo ::forward(Tensor<float,3> &vs,VectorXf &dsyn,VectorXf &dg)
 {   
-    surf.forward(mod,vs,dsyn);
+    surf.TravelTime(mod,vs,dsyn);
     modref.gravity(gmat,vs,dg);
 }
 
@@ -367,42 +376,57 @@ void JointTomo:: checkerboard()
 
     // add noise
     for(int i=0;i<surf.num_data;i++){
-        surf.obst(i) = dsyn(i)  +  param.noiselevel * gaussian();
+        surf.obst(i) = dsyn(i) * (1.0 +  param.noiselevel * gaussian());
     }
 
     for(int i=0;i<obsg.np;i++){
-        obsg.Gr[i] = dg(i)  +  param.noiselevel1 * gaussian();
+        obsg.Gr[i] = dg(i) * (1.0 + param.noiselevel1 * gaussian());
     }
 }
 
-void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dv,
-                            VectorXf &dsyn,VectorXf &dg)
+int JointTomo:: FrechetKernel(Tensor<float,3> &vs,VectorXf &dsyn,
+            std::string save_dir)
+{
+    int nar = surf.FrechetKernel(mod,vs,dsyn,save_dir);
+
+    return nar;
+}
+
+void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
 {
     int nx = mod.nx, ny = mod.ny;
     int nz = mod.nz;
     int m = num_data;
     VectorXf res(m + n);
 
-    // initialize global sparse matrix
-    int nonzeros =(int)(surf.num_data * n * param.spra) + gmat.nonzeros;
-    coo_matrix<float>smat(m + n,n,nonzeros);
-
-    // compute FrechetKernel
-    int nar = surf.FrechetKernel(mod,vsf,dsyn,smat);
+    // compute frechet kernel, and gravity anomaly
+    std::string basedir = "kernel";
+    int nar = FrechetKernel(vsf,dsyn,basedir);
     modref.gravity(gmat,vsf,dg);
-    // nar is no. of zeros of current smat, without regularization
+    float mean = dg.sum() / dg.size();
+    dg.array() -= mean;
 
-    // compute residuals
+    // renew residues vector
     res.setZero();
+    Eigen::Map<VectorXf> Gr(obsg.Gr,obsg.np);
     res.segment(0,surf.num_data) = surf.obst - dsyn;
-    Map<VectorXf> Gr(obsg.Gr,obsg.np);
     res.segment(surf.num_data,obsg.np) = Gr - dg;
+
+    // initialize global sparse matrix
+    coo_matrix<float> smat(m+n,n,nar + gmat.nonzeros + n * 7);
+    smat.setZeros();
+    int count = 0;
+    std::cout << "Assembling derivative Matrix ..." << std::endl;
+    for(int i=0;i<nthread;i++){
+        std::string filename = basedir + "/" +  std::to_string(i) + ".txt";
+        count = smat.read(filename,count);
+    }
 
     // compute weights according to Julia(2000)
     float sigma1,sigma2;
     if(param.ifsyn == 1){
-        sigma1 = 1.0;
-        sigma2= 1.0;
+        sigma1 = param.noiselevel;
+        sigma2= param.noiselevel1;
     }
     else if(param.ifsyn ==2){
         float sigma1 = dnrm2(res.data(),m);
@@ -463,7 +487,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dv,
     nar += gmat.nonzeros;
 
     // add regularization terms
-    int count = 0;
+    count = 0;
     float smooth = param.smooth;
     for(int k=0;k<nz-1;k++){
     for(int j=0;j<ny-2;j++){
@@ -528,6 +552,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dv,
    // solve equations by lsmr
     std::cout <<"solving linear systems by LSMR ..." << std::endl;
     int itnlim = n * 2;
+    VectorXf dv(n);
     LSMRDict<float> dict(itnlim,10,param.damp,param.smooth);
     smat.LsmrSolver(res.data(),dv.data(),dict);
     std::cout << "max negative and positive perturbation: " \
@@ -535,15 +560,18 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dv,
                 <<std::endl;
 
     // renew vsf and tackle large variations
-    TensorMap<Tensor<float,3>>dx(dv.data(),nx-2,ny-2,nz-1);
+    Eigen::TensorMap<Tensor<float,3>>dx(dv.data(),nx-2,ny-2,nz-1);
     float minvel = param.minvel;
     float maxvel = param.maxvel;
     for(int k=0;k<nz-1;k++){
     for(int j=0;j<ny-2;j++){
     for(int i=0;i<nx-2;i++){
-        if(dx(i,j,k) > 0.5) dx(i,j,k) = 0.5;
-        if(dx(i,j,k) < -0.5) dx(i,j,k) = -0.5;
-        float temp = dx(i,j,k) + vsf(i+1,j+1,k);
+    	float temp = dx(i,j,k);
+        if(temp > 0.5) temp = 0.5;
+        if(temp < -0.5) temp = -0.5;
+        dx(i,j,k) = temp;
+
+        temp = temp + vsf(i+1,j+1,k);
         if(temp > maxvel) temp = maxvel;
         if(temp < minvel) temp = minvel;
         vsf(i+1,j+1,k) = temp;

@@ -1,7 +1,7 @@
 #include"gravmat.hpp"
-#include"defmod.hpp"
 #include"coo_matrix.hpp"
 #include<fstream>
+#include<string.h>
 
 int main(int argc,char *argv[]){
     // check input parameters
@@ -22,9 +22,13 @@ int main(int argc,char *argv[]){
         modtrue = modfile +".true";
         if(argc == 5) modtrue = argv[4];
     }
-    else{
+    else if (argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
         std::cout <<"./this paramfile datafile initmod (truemod)" << std::endl;
+        exit(0);
+    }
+    else{
+        std::cout <<"Please run this executable file -h:"<<std::endl;
         exit(0);
     }
     std::cout <<std::endl;

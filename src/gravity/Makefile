@@ -1,24 +1,25 @@
 out = mkmat
 
 # compiler and options
-opt=-O3
+include ../../include/Makefile
+
 cc = g++
-includes = -I../../include
-gsl_lib = -lgsl -lgslcblas
+includes = -I../../include $(path_to_eigen) $(path_to_gsl_include)
+gsl_lib = -lgsl -lgslcblas $(path_to_gsl_lib)
+utils=../utils
 
 # c scripts
-src =../defmod.cpp  gauleg.cpp  main.cpp ../spherical.cpp
-
+src = $(shell find *.cpp) $(utils)/spherical.cpp  $(utils)/gauleg.cpp
 # objective
-cppobj = $(src:%.cpp=%.o) gravmat.o ../empirical.o 
+cppobj = $(src:%.cpp=%.o) $(utils)/empirical.o
 
 $(out):  $(cppobj)
-	$(cc)  -o ../../bin/$(out) $(cppobj) -lm -fopenmp $(gsl_lib)
+	$(cc)  -o ../../bin/$(out) $(cppobj)  -lm -fopenmp $(gsl_lib)
 
 gravmat.o:gravmat.cpp
-	$(cc) -g -c -std=c++11 $(includes) $< -o $@ $(opt) -fopenmp
+	$(cc) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp
 %.o: %.cpp
-	$(cc) -g -c -std=c++11 $(includes) $< -o $@ $(opt)
+	$(cc) -g -c $(cppstd) $(includes) $< -o $@ $(opt)
 
 %.o: %.f90
 	gfortran -g -c $< -o $@ $(opt)

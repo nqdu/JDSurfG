@@ -1,4 +1,4 @@
-out = DSurfTomo
+out = JointTomo
 
 # compiler and options
 include ../../include/Makefile
@@ -6,11 +6,15 @@ cc = g++
 FC = gfortran
 FFLAGS  = -ffixed-line-length-none -ffloat-store\
            -w -m64 -mcmodel=medium
-includes = -I../../include $(path_to_eigen)
+includes = -I../../include $(path_to_eigen) $(path_to_gsl_include)
+gsl_lib = -lgsl -lgslcblas $(path_to_gsl_lib)
 surfdir= ../SurfaceWave
+utils = ../utils
 
-# c scripts
-src = $(shell find *.cpp) $(surfdir)/SurfaceWave.cpp ../utils/gaussian.cpp
+# c++ scripts
+src = $(shell find *.cpp) $(surfdir)/SurfaceWave.cpp $(utils)/gaussian.cpp \
+	   $(utils)/spherical.cpp $(utils)/gauleg.cpp ../gravity/gravmat.cpp
+
 
 # fortran src
 f90mp=$(surfdir)/fmm.f90 $(surfdir)/sphfmm.f90 
@@ -22,7 +26,7 @@ cppobj = $(src:%.cpp=%.o)
 fobj= $(f90src:%.f90=%.o) $(f90mp:%.f90=%.o) $(f77src:%.f=%.o) 
 
 $(out): $(fobj) $(cppobj)
-	$(cc)  -o ../../bin/$(out) $(fobj) $(cppobj) -lgfortran -fopenmp
+	$(cc)  -o ../../bin/$(out) $(fobj) $(cppobj) -lgfortran -fopenmp $(gsl_lib)
 
 %.o: %.f90
 	$(FC) -g -c $< -o $@  $(opt)
@@ -42,4 +46,4 @@ $(surfdir)/sphfmm.o: $(surfdir)/sphfmm.f90
  $(surfdir)/fmm.o: $(surfdir)/fmm.f90
 	$(FC) -g -c $< -o $@  $(opt) -fopenmp
 clean:
-	rm  *.o *.mod  $(surfdir)/*.o
+	rm  *.o  $(utils)/*.o

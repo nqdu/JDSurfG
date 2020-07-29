@@ -1,12 +1,18 @@
-#include<iostream>
-#include<string>
+#include"tomography.hpp"
 #include<fstream>
-#include"surftomo.hpp"
 using Eigen::Tensor;
 using Eigen::VectorXf;
 
+void print_mean_and_rms(VectorXf a,std::string info)
+{
+    float mean = a.mean();
+    float rms = a.array().pow(2.).mean() - mean * mean;
+    rms = sqrt(rms);
+    std::cout << info << " " << mean << " " << rms << std::endl;
+}
+
 int main(int argc, char* argv[]){
-    // check input parameters
+   // check input parameters
     std::string paramfile,modfile,datafile,modtrue;
     std::cout << "\n";
     std::cout << "\t Direct Surface Wave Tomography" << std::endl;
@@ -27,9 +33,13 @@ int main(int argc, char* argv[]){
         modtrue = modfile +".true";
         if(argc == 5) modtrue = argv[4];
     }
-    else{
+    else if(argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
         std::cout <<"./this paramfile datafile initmod (truemod)" << std::endl;
+        exit(0);
+    }
+    else{
+        std::cout <<"Please run this executable file -h for help"<<std::endl;
         exit(0);
     }
     std::cout <<std::endl;
@@ -43,8 +53,7 @@ int main(int argc, char* argv[]){
     // read all the parameters, initial model, and observed data
     tomo.readdata(paramfile,datafile,modfile,modtrue);
 
-    // initialize some parameters
-    VectorXf dv(tomo.n); // variation of S-wave velocity for every step
+   // initialize some parameters
     VectorXf dsyn(tomo.num_data); // synthetics for every step
     Tensor<float,3> vsf = tomo.mod.vs * 1.0f; // set inversion model to initial one
 
@@ -57,37 +66,35 @@ int main(int argc, char* argv[]){
     // build a folder to store synthetics for every iteration
     int flag = system("mkdir -p results");
 
-   // save initial model
+    // save initial model
     int nx = tomo.mod.nx, ny = tomo.mod.ny,nz=tomo.mod.nz;
     std::string resfile="results/mod_iter"+ std::to_string(0) +  ".dat";
     outfile.open(resfile);
-    for(int k=0;k<nz-1;k++){
-    for(int j=0;j<ny-2;j++){
-    for(int i=0;i<nx-2;i++){
-        outfile << tomo.mod.lon(j+1) << " " <<  tomo.mod.lat(i+1) << " " 
-                << tomo.mod.dep(k) << " " << vsf(i+1,j+1,k) << std::endl;
+    for(int k=0;k<nz;k++){
+    for(int j=0;j<ny;j++){
+    for(int i=0;i<nx;i++){
+        outfile << tomo.mod.lon(j) << " " <<  tomo.mod.lat(i) << " " 
+                << tomo.mod.dep(k) << " " << vsf(i,j,k) << std::endl;
     }}}
     outfile.close();
 
     // inversion begin
+    std::string info;
     for(int iter =0;iter < tomo.param.maxiter;iter++){
         std::cout << std::endl;
         std::cout << "Iteration " + std::to_string(iter+1) << std::endl;
-        tomo.inversion(vsf,dv,dsyn);
+        tomo.inversion(vsf,dsyn);
 
         // compute mean and rms of residuals
         VectorXf res = tomo.surf.obst - dsyn;
-        float mean = res.mean();
-        float rms = res.array().pow(2.).mean() - mean * mean;
-        rms = sqrt(rms);
-        std::cout << "mean and rms of resuduals before this iteration: " 
-                    << mean << " " << rms<< std::endl;
+        info = "mean and rms before this iteration(s):";
+        print_mean_and_rms(res,info);
 
         // save current synthetics
         std::string resfile = "results/res"+std ::to_string(iter)+".dat";
         outfile.open(resfile);
         for(int i=0;i<tomo.num_data;i++){
-            outfile << tomo.surf.dist(i) << " " << tomo.surf.obst(i) << " "\
+            outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
                    << dsyn(i) <<std::endl;
         }
         outfile.close();
@@ -95,11 +102,11 @@ int main(int argc, char* argv[]){
         // save current model
         resfile="results/mod_iter"+std ::to_string(iter+1)+".dat";
         outfile.open(resfile);
-        for(int k=0;k<nz-1;k++){
-        for(int j=0;j<ny-2;j++){
-        for(int i=0;i<nx-2;i++){
-            outfile << tomo.mod.lon(j+1) << " " <<  tomo.mod.lat(i+1) << " " 
-                    << tomo.mod.dep(k) << " " << vsf(i+1,j+1,k) << std::endl;
+        for(int k=0;k<nz;k++){
+        for(int j=0;j<ny;j++){
+        for(int i=0;i<nx;i++){
+            outfile << tomo.mod.lon(j) << " " <<  tomo.mod.lat(i) << " " 
+                    << tomo.mod.dep(k) << " " << vsf(i,j,k) << std::endl;
         }}}
         outfile.close();
     }
@@ -111,13 +118,21 @@ int main(int argc, char* argv[]){
 
     // compute mean and rms of residuals
     VectorXf res = tomo.surf.obst - dsyn;
-    float mean = res.mean();
-    float rms = res.array().pow(2.).mean() - mean * mean;
-    rms = sqrt(rms);
-    std::cout << "mean and rms of resuduals after inversion: " 
-                << mean << " " << rms<< std::endl;
+    info = "mean and rms of traveltime residuals before this iteration(s):";
+    print_mean_and_rms(res,info);
+
+    // save synthetics for last iteration
+    int maxiter = tomo.param.maxiter;
+    resfile = "results/res"+std ::to_string(maxiter)+".dat";
+    outfile.open(resfile);
+    for(int i=0;i<tomo.num_data;i++){
+        outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
+                << dsyn(i) <<std::endl;
+    }
+    outfile.close();
 
     std::cout << std::endl;
     std::cout << "Program finishes Successfully!" << std::endl;
     return 0;
+
 }

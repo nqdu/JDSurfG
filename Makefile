@@ -1,7 +1,5 @@
-SUBDIRS	= src/surftomo src/Joint src/gravity 
+SUBDIRS	= src/surftomo src/gravity src/JointTomo
 .PHONY: subdirs $(SUBDIRS)
-#$(SUBDIRS):
-#	$(MAKE) -C $@
 
 subdirs: $(SUBDIRS)
 	@for dir in ${SUBDIRS}; do \
@@ -12,4 +10,3 @@ clean:
 	@for dir in ${SUBDIRS}; do \
 		${MAKE} -C $$dir clean; \
 	done
-	rm src/*.o

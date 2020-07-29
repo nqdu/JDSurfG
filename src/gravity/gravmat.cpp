@@ -1,12 +1,19 @@
-#include"defmod.hpp"
-#include"spherical.hpp"
+/**
+ * This script is the core module of adaptive Gauss-Legendre gravity modeling
+ * Written by Zhiwei Li at Dec. 2011
+ * Modified by Nanqiao Du by adding parallel module and coordinate format matrix
+*/
+#include"utils.hpp"
+#include"openmp.hpp"
 #include"gravmat.hpp"
-#include"const.hpp"
-#include"empirical.hpp"
-#include"gauleg.hpp"
 #include<omp.h>
 #include<fstream>
 #include<stdlib.h>
+#include<math.h>
+#define  degrad2 (pi/180.0)
+#define  hpi2    (pi*0.5)
+#define  rearth2 6371.0
+#define G 6.67E-6
 /*
 	Change NMAX and NSCALE bigger for more accurate results,
 	but bigger NMAX and NSCALE means much more computation.
@@ -18,9 +25,61 @@
 #define NMAX      256
 #define NSCALE    5
 #define MINDISKM  0.5
-#define maxdis 100.0
+#define maxdis 100.0 // maximum distance between 2 points 
 #define ftol 1.0e-6
 
+void OBSSphGraRandom :: chancoor(int flag)
+{
+    if( flag==0 && israd==1 ){          //change coordinates to lon/lat/dep;
+        for(int i=0; i<np; i++ ){
+            lon[i] = lon[i]/degrad2;
+            lat[i] =  geocen2geogralat((double)(hpi2 - lat[i]) )/degrad2;
+        }
+        z0   = rearth2 - z0;
+        israd = 0;
+    }
+    else if(flag==1 && israd==0) {     //change coordinates to lonrad/colatrad/r;
+        for(int i=0; i<np; i++ ){
+            lon[i] = lon[i]*degrad2;
+            //lat[i] = hpi2 - lat[i]*degrad2;
+            lat[i] = hpi2 - geogra2geocenlat( (double)(lat[i]*degrad2));
+        }
+        z0 = rearth2 - z0;
+        israd = 1;
+    }
+	else{
+        std::cout <<"don't need to change coordinates" << std::endl;
+    }
+}
+
+void OBSSphGraRandom :: read_obs_data(std::string filename)
+{
+    std::ifstream infile;
+    std::string line;
+    np = 0;
+
+    // get lines of this file
+    FILE *pin;
+    if((pin=popen(("wc -l " + filename).c_str(), "r"))==NULL){
+        std::cout << "cannot open file "<< filename << std::endl;
+        exit(0);
+    }
+    int flag = fscanf(pin,"%d",&np);
+    pclose(pin);
+
+    infile.open(filename);
+    lon = new float [np];
+    lat = new float [np];
+    Gr = new float [np];
+    z0 = 0.0;
+    israd = 0;
+
+    for(int i=0;i<np;i++){
+        infile >> lon[i] >> lat[i] >> Gr[i];
+    }
+
+    infile.close();
+}
 void MOD3DSphGra :: chancoor(int flag)
 {
 	int	i;
@@ -74,10 +133,7 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     std::string line;
 
     fp.open(paramfile);
-
-    for(i=0;i<5;i++){
-        getline(fp,line);
-    }
+    getline(fp,line);
 
     sscanf(line.c_str(),"%d%d%d",&ny,&nx,&nz);
     nx=nx-2;
@@ -103,7 +159,7 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
         lat[i]=uly-i*dy;
 
     //read synflag
-    for(i=0;i<7;i++)
+    for(i=0;i<6;i++)
         getline(fp,line);
     sscanf(line.c_str(),"%d",&kmax); //kmaxRc
     if(kmax>0){
@@ -261,7 +317,6 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
     float   dx, dy ,dz;
     int     xn, yn, zn;
     double  x1 = -1.0, x2 = 1.0;
-
     double  xw[NMAX+1], yw[NMAX+1], zw[NMAX+1];   //NOTICE:       xw, yw, zw, xp, yp, zp begin from 1 to xn, yn, zn
     double  xp[NMAX+1], yp[NMAX+1], zp[NMAX+1];   //NOTICE:       NOT from 0.
     k = NMAX+1 ;
@@ -281,56 +336,56 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
         n = k*nx*ny+i*ny+j;
         //get the beginning and ending points for each direction.
         if( k == (nz-1) ){
-            rs1             = mod3dsphgra.dep[k];
-            rs2             =0.5*(mod3dsphgra.dep[k-1]+mod3dsphgra.dep[k]);
+            rs1 = mod3dsphgra.dep[k];
+            rs2 = 0.5*(mod3dsphgra.dep[k-1]+mod3dsphgra.dep[k]);
         }
         else if ( k == 0 ){
-            rs1             = 0.5*(mod3dsphgra.dep[k]+mod3dsphgra.dep[k+1]);
-            rs2             = mod3dsphgra.dep[k];
+            rs1 = 0.5*(mod3dsphgra.dep[k]+mod3dsphgra.dep[k+1]);
+            rs2 = mod3dsphgra.dep[k];
         }
         else{
-            rs1             = 0.5*(mod3dsphgra.dep[k]+mod3dsphgra.dep[k+1]);
-            rs2             = 0.5*(mod3dsphgra.dep[k-1]+mod3dsphgra.dep[k]);
+            rs1 = 0.5*(mod3dsphgra.dep[k]+mod3dsphgra.dep[k+1]);
+            rs2 = 0.5*(mod3dsphgra.dep[k-1]+mod3dsphgra.dep[k]);
         }
                                                                                                                                                                                                 
         if( i == 0 ){
-            lonrads1        = mod3dsphgra.lon[i];
-            lonrads2        = 0.5*(mod3dsphgra.lon[i+1]+mod3dsphgra.lon[i]);
+            lonrads1 = mod3dsphgra.lon[i];
+            lonrads2 = 0.5*(mod3dsphgra.lon[i+1]+mod3dsphgra.lon[i]);
         }
         else if( i == (nx-1) ){
-            lonrads1        = 0.5* (mod3dsphgra.lon[i]+mod3dsphgra.lon[i-1]);
-            lonrads2        = mod3dsphgra.lon[i];
+            lonrads1 = 0.5* (mod3dsphgra.lon[i]+mod3dsphgra.lon[i-1]);
+            lonrads2 = mod3dsphgra.lon[i];
         }
         else{
-            lonrads1        = 0.5*(mod3dsphgra.lon[i]+mod3dsphgra.lon[i-1]);
-            lonrads2        = 0.5*(mod3dsphgra.lon[i+1]+mod3dsphgra.lon[i]);
+            lonrads1 = 0.5*(mod3dsphgra.lon[i]+mod3dsphgra.lon[i-1]);
+            lonrads2 = 0.5*(mod3dsphgra.lon[i+1]+mod3dsphgra.lon[i]);
         }
                                                                                                                                                                                                 
         if( j == 0 ){
-            colatrads1      = mod3dsphgra.lat[j];
-            colatrads2      = 0.5*(mod3dsphgra.lat[j+1]+mod3dsphgra.lat[j]);
+            colatrads1 = mod3dsphgra.lat[j];
+            colatrads2 = 0.5*(mod3dsphgra.lat[j+1]+mod3dsphgra.lat[j]);
         }
         else if ( j == (ny-1) ){
-            colatrads1      = 0.5*(mod3dsphgra.lat[j]+mod3dsphgra.lat[j-1]);
-            colatrads2      = mod3dsphgra.lat[j];
+            colatrads1 = 0.5*(mod3dsphgra.lat[j]+mod3dsphgra.lat[j-1]);
+            colatrads2 = mod3dsphgra.lat[j];
         }
         else{
-            colatrads1      = 0.5*(mod3dsphgra.lat[j]+mod3dsphgra.lat[j-1]);
-            colatrads2      = 0.5*(mod3dsphgra.lat[j+1]+mod3dsphgra.lat[j]);
+            colatrads1 = 0.5*(mod3dsphgra.lat[j]+mod3dsphgra.lat[j-1]);
+            colatrads2 = 0.5*(mod3dsphgra.lat[j+1]+mod3dsphgra.lat[j]);
         }
                                                                                                                                                                                                 
         //getdensityBlock( mod3dsphgra, i, j, k, &density );      //===get the density at the grid i/j/k block
 
         //====change to International Unit kg/m3
         //weight        = 1000.0*((rs2-rs1)*(lonrads2-lonrads1)*(colatrads2-colatrads1))/8.0;
-        weight          = 125.0*((rs2-rs1)*(lonrads2-lonrads1)*(colatrads2-colatrads1));
+        weight  = 125.0*((rs2-rs1)*(lonrads2-lonrads1)*(colatrads2-colatrads1));
 
-        dlonrad         = lonrads2 - lonrads1;
-        dcolatrad       = colatrads2 - colatrads1;
-        dr              = rs2 - rs1;
-        alonrad         = lonrads2 + lonrads1;
-        acolatrad       = colatrads2 + colatrads1;
-        ar              = rs2 + rs1;
+        dlonrad = lonrads2 - lonrads1;
+        dcolatrad = colatrads2 - colatrads1;
+        dr = rs2 - rs1;
+        alonrad = lonrads2 + lonrads1;
+        acolatrad = colatrads2 + colatrads1;
+        ar = rs2 + rs1;
 
         //====calculate the distance from source to observation point,
         //====determine the parameters for Gauss-Legendre quadrature integration
@@ -427,7 +482,7 @@ void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<floa
     openmpi is used.
 */
 void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    coo_matrix<float> &smat,int nthreads)
+                    coo_matrix<float> &smat)
 {
     double   ro;
     int     i, j;
@@ -447,7 +502,7 @@ void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
     data = new float[np * ncol]();
     nars = new int [np]();
 
-    omp_set_num_threads(nthreads);
+    omp_set_num_threads(nthread);
     #pragma omp parallel for shared(ObsSphGra,mod3dsphgra)
     for(i=0;i<np;i++){
         double lonrado   = ObsSphGra.lon[i];
@@ -486,3 +541,8 @@ void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
 #undef MINDISKM
 #undef maxdis
 #undef ftol
+#undef  degrad2
+#undef  hpi2
+#undef  rearth2
+#undef  G
+

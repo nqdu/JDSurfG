@@ -1,41 +1,40 @@
-#include"surftomo.hpp"
+#include"tomography.hpp"
+#include"utils.hpp"
+#include"coo_matrix.hpp"
 #include<fstream>
-#include"delsph.hpp"
-#include"const.hpp"
-using namespace Eigen;
+#include"openmp.hpp"
+using Eigen::Tensor;
+using Eigen::VectorXf;
 
-void SurfTomo ::forward(Tensor<float,3> &vs,VectorXf &dsyn)
+int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
+                std::vector<float> &rcz,std::vector<float> &v)
 {
-    surf.forward(mod,vs,dsyn);
+    while(!feof(fp)){
+        if(fgets(line,300*sizeof(char),fp)==NULL)
+            break;
+        if(line[0] == '#') break;
+        float stalat,stalon,velvalue,dist1;
+        sscanf(line,"%f%f%f",&stalat,&stalon,&velvalue);
+        stalat=(90.0-stalat)*pi/180.0;
+        stalon=stalon*pi/180.0;
+        rcx.push_back(stalat);
+        rcz.push_back(stalon);
+        v.push_back(velvalue);
+    } 
+    int nr = rcx.size();
+
+    return nr;   
 }
 
-void SurfTomo::checkerboard()
+int SurfTomo:: readdata(std::string paramfile,std::string datafile,
+                        std::string modfile,std::string modtrue )
 {
-    VectorXf dsyn(surf.num_data);
-    surf.checkerboard(mod,vstrue,dsyn,param.noiselevel);
-    surf.obst = dsyn;
-}
-
-void SurfTomo :: inversion(Tensor<float,3> &vs,VectorXf &dv,VectorXf &dsyn)
-{
-    int nar = (int)(num_data * n * param.spra);
-    coo_matrix<float> smat(num_data+ n,n,nar);
-    surf.inversion(mod,vs,smat,dv,dsyn,param.damp,
-                param.smooth,param.minvel,param.maxvel);
-}
-
-void SurfTomo ::readdata(std::string paramfile,std::string datafile,
-                std::string modfile,std::string modtrue )
-{
-   // read paramfile
+ // read paramfile
     std::ifstream infile;
     std::string line;
     std ::istringstream info;    
     int nsrc;
     infile.open(paramfile);
-    for(int i=0;i<4;i++){
-        getline(infile,line);
-    }
 
     getline(infile,line);
     sscanf(line.c_str(),"%d%d%d",&mod.nx,&mod.ny,&mod.nz);
@@ -45,9 +44,6 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
 
     getline(infile,line);
     sscanf(line.c_str(),"%f%f",&mod.dvxd,&mod.dvzd);
-
-    getline(infile,line);
-    sscanf(line.c_str(),"%d",&nsrc);
 
     getline(infile,line);
     sscanf(line.c_str(),"%f%f",&param.smooth,&param.damp);
@@ -61,8 +57,8 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
     getline(infile,line);
     sscanf(line.c_str(),"%d",&param.maxiter);
 
-    getline(infile,line);
-    sscanf(line.c_str(),"%f",&param.spra);
+    //getline(infile,line);
+    //sscanf(line.c_str(),"%f",&param.spra);
 
     // output some infomation to screen
     printf("model origin: latitude,longitude\n");
@@ -146,23 +142,12 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
 
     // allocate data parameters
     int nx = mod.nx,ny = mod.ny, nz= mod.nz;
-    surf.n = (nx-2) * (ny-2) * (nz -1);
-    n = surf.n;
-    surf.kmax = surf.kmaxRc + surf.kmaxRg + surf.kmaxLc + surf.kmaxLg;
-    int kmax = surf.kmax;
+    surf.kmax = kmaxRc + kmaxRg + kmaxLc + kmaxLg;
     mod.dep.resize(nz);
     mod.lon.resize(ny); mod.lat.resize(nx);
     mod.vs.resize(nx,ny,nz);
+    unknowns = (nx-2) * (ny -2) * (nz -1 );
     if(param.ifsyn) vstrue.resize(nx,ny,nz);
-    surf.scxf.resize(nsrc,kmax);
-    surf.sczf.resize(nsrc,kmax);
-    surf.rcxf.resize(nsrc,nsrc,kmax);
-    surf.rczf.resize(nsrc,nsrc,kmax);
-    surf.periods.resize(nsrc,kmax);
-    surf.wavetype.resize(nsrc,kmax);
-    surf.nrc1.resize(nsrc,kmax);
-    surf.nsrc1.resize(kmax);
-    surf.igrt.resize(nsrc,kmax);
 
     // renew lon and lat
     for(int i=0;i<ny;i++) mod.lon(i) = mod.gozd + i * mod.dvzd;
@@ -172,66 +157,52 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
 
     // read surface wave traveltime data
     char line1[300];
-    float *obs = new float [nsrc * nsrc *kmax];
-    float *dis = new float [nsrc* nsrc * kmax];
 
-    int steprc=0,steps=0,knum=0,knumo;
     char dummy;
     float sta1_lat,sta1_lon,sta2_lat,sta2_lon,velvalue,dist1;
     int wavetp,veltp,period,maxnar;
     int dall=0;
-    knumo=99999;
 
     FILE *fp;
     if((fp=fopen(datafile.c_str(),"r"))==NULL){
         std::cout <<"cannot open file" << std::endl;
         exit(0);
     }
+    if(fgets(line1,300*sizeof(char),fp)==NULL){
+        std::cout <<"cannot read file" << std::endl;
+        exit(0);
+    }
     while(!feof(fp)){
-        // read one line
-        if(fgets(line1,300*sizeof(char),fp)==NULL)
-            break;
 
-        // if read the source term
-        if(line1[0]=='#'){
-            sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
+        // extract source station information
+        sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
+        sta1_lat= (90.0-sta1_lat)*pi/180.0;
+        sta1_lon *= pi/180.0;
+        std::string wtp;
+        if ( wavetp==2 && veltp==0 ) 
+            wtp="Rc";
+        else if ( wavetp==2 && veltp==1 ) 
+            wtp="Rg";
+        else if ( wavetp==1 && veltp==0 ) 
+            wtp="Lc";
+        else
+            wtp="Lg";
+        std::vector<float> rcx,rcz,v;
+        int nr = read_receiver(fp,line1,rcx,rcz,v);
 
-            // change period index according to wavetype and velotype
-            if ( wavetp==2 && veltp==0 ) 
-                knum = period-1;
-            else if ( wavetp==2 && veltp==1 ) 
-                knum = period -1 +kmaxRc;
-            else if ( wavetp==1 && veltp==0 ) 
-                knum = period - 1 + kmaxRc + kmaxRg;
-            else
-                knum = period -1 + kmaxRc + kmaxRg + kmaxLc;
-            
-            if (knum!=knumo) // if get a new period, set number of source=0
-                steps=0;
-            steprc=0; // init number of receivers
-            sta1_lat= (90.0-sta1_lat)*pi/180.0;
-            sta1_lon *= pi/180.0;
-            surf.scxf(steps,knum) = sta1_lat;
-            surf.sczf(steps,knum) = sta1_lon;
-            surf.periods(steps,knum) = period;
-            surf.wavetype(steps,knum) = wavetp;
-            surf.igrt(steps,knum) = veltp;
-            surf.nsrc1(knum)=steps+1;
-            knumo=knum;
-            steps+=1;
+        // init station pair
+        StationPair pair(wtp,dall,period-1,nr,sta1_lat,sta1_lon);
+        for(int i=0;i<nr;i++){
+            float dist;
+            pair.rcx[i] = rcx[i];
+            pair.rcz[i] = rcz[i];
+            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],&dist);
+            pair.dist[i] = dist;
+            pair.obstime[i] = dist / v[i];
+            dall ++ ;
+            //std::cout << pair.obstime[i] << std::endl;
         }
-        else{
-            sscanf(line1,"%f%f%f",&sta2_lat,&sta2_lon,&velvalue);
-            sta2_lat=(90.0-sta2_lat)*pi/180.0;
-            sta2_lon=sta2_lon*pi/180.0;
-            surf.rcxf(steprc,steps-1,knum) = sta2_lat;
-            surf.rczf(steprc,steps-1,knum) = sta2_lon;
-            delsph(sta1_lat,sta1_lon,sta2_lat,sta2_lon,dis+dall);
-            obs[dall] = dis[dall] / velvalue;
-            dall++;
-            surf.nrc1(steps-1,knum) = steprc + 1;
-            steprc+=1;
-        }
+        surf.Pairs.push_back(pair);
     }
 
     // print data information on screen
@@ -239,14 +210,16 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
     std::cout<<"The number of measurements is "<<dall<<std::endl;
     surf.num_data = dall;
     num_data = dall;
-
-    // allocate space for dist and obst
-    surf.obst.resize(dall); surf.dist.resize(dall);
-    for(int i=0;i<dall;i++){
-        surf.obst(i) = obs[i];
-        surf.dist(i) = dis[i];
+    surf.obst.resize(dall);
+    surf.sta_dist.resize(dall);
+    int count = 0;
+    for(int i=0;i<surf.Pairs.size();i++){
+        for(int j=0;j<surf.Pairs[i].nr;j++){
+            surf.obst(count) = surf.Pairs[i].obstime[j];
+            surf.sta_dist(count) = surf.Pairs[i].dist[j];
+            count += 1;
+        }
     }
-    delete[] dis; delete[] obs;
 
     // initialize sparse matrix
     //int nonzeros = (int)(dall * n * param.spra + n);
@@ -286,4 +259,145 @@ void SurfTomo ::readdata(std::string paramfile,std::string datafile,
         }
         infile.close();
     }
+
+    return 1;
+}
+
+void SurfTomo:: forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data)
+{
+    surf.TravelTime(mod,vs,data);
+}
+
+int SurfTomo::FrechetKernel(Tensor<float,3> &vs,VectorXf &data,std::string save_dir)
+{
+    int nar = surf.FrechetKernel(mod,vs,data,save_dir);
+
+    return nar;
+}
+
+void SurfTomo :: checkerboard()
+{
+    VectorXf dsyn(surf.num_data);
+    forward(vstrue,dsyn);
+    // add noise
+    for(int i=0;i<surf.num_data;i++){
+        dsyn(i) *= (1.0 + param.noiselevel * gaussian());
+    }
+    surf.obst = dsyn;
+}
+
+void SurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
+{
+    int m = surf.num_data;
+    int nx = mod.nx, ny = mod.ny;
+    int nz = mod.nz;
+    int n = (nx-2) * (ny -2) * (nz  - 1);
+
+    // residual vector and velocity variation vector
+    VectorXf res(m + n),dv(n);
+    res.setZero();
+    dv.setZero();
+
+    // compute frechet kernel
+    std::string basedir = "kernel";
+    int nar = FrechetKernel(vsf,dsyn,basedir);
+    //std::cout << nar << std::endl;
+    res.segment(0,m) = surf.obst - dsyn;
+
+    // initialize matrix
+    coo_matrix<float> smat(m+n,n,nar + n*7);
+    smat.setZeros();
+    int count = 0;
+    std::cout << "Assembling derivative Matrix ..." << std::endl;
+    for(int i=0;i<nthread;i++){
+        std::string filename = basedir + "/" +  std::to_string(i) + ".txt";
+        count = smat.read(filename,count);
+    }
+    
+    // add regularization terms
+    count = 0;
+    float weight = param.smooth;
+    for(int k=0;k<nz-1;k++){
+    for(int j=0;j<ny-2;j++){
+    for(int i=0;i<nx-2;i++){
+        if( i==0 || i==nx-3 || j==0 || j==ny-3 || k==0 || k==nz-2){
+            // and more restrictions to boundary points
+            if(nar + 1 > smat.nonzeros){
+                std::cout << "please increase sparse ratio!" << std::endl;
+                exit(0);
+            }
+            smat.col[nar] = k * (ny -2) * (nx -2) + j * (nx -2) + i;
+            smat.val[nar] = 2.0 * weight;
+            smat.rw[nar] = count + m;
+            nar ++;
+            count ++ ; 
+        }
+        else{
+            if(nar  + 7 > smat.nonzeros){
+                std::cout << "please increase sparse ratio!" << std::endl;
+                exit(0);
+            }
+            int rwc = count + m;  // current row
+            int clc = k * (ny -2) * (nx -2) + j * (nx -2) + i;// current column
+            smat.val[nar] = 6.0 * weight;
+            smat.col[nar] = clc;
+            smat.rw[nar] = rwc;
+
+            // x direction
+            smat.val[nar + 1] = -weight;
+            smat.rw[nar + 1] = rwc;
+            smat.col[nar + 1] = clc - 1;
+            smat.val[nar + 2] = -weight;
+            smat.rw[nar + 2] = rwc;
+            smat.col[nar + 2] = clc + 1;
+
+            // y direction
+            smat.val[nar + 3] = -weight;
+            smat.rw[nar + 3] = rwc;
+            smat.col[nar + 3] = clc - (nx - 2);
+            smat.val[nar + 4] = -weight;
+            smat.rw[nar + 4] = rwc;
+            smat.col[nar + 4] = clc + (nx - 2);
+
+            // z direction
+            smat.val[nar + 5] = -weight;
+            smat.rw[nar + 5] = rwc;
+            smat.col[nar + 5] = clc - (nx - 2) * (ny - 2);
+            smat.val[nar + 6] = -weight;
+            smat.rw[nar + 6] = rwc;
+            smat.col[nar + 6] = clc + (nx - 2) * (ny - 2);
+
+            nar += 7;
+            count++;
+        }
+    }}}
+
+    // renew sparse matrix meta-informations
+    //smat.m = m + count;
+    smat.nonzeros = nar;
+    smat.cpp2fortran();
+
+    // solve equations by lsmr
+    std::cout <<"solving linear systems by LSMR ..." << std::endl;
+    int itnlim = n * 2;
+    LSMRDict<float> dict(itnlim,10,param.damp,weight);
+    smat.LsmrSolver(res.data(),dv.data(),dict);
+    std::cout << "max negative and positive perturbation: " \
+                << dv.minCoeff() <<" " << dv.maxCoeff()\
+                <<std::endl;
+    
+    // tackle large variations
+    Eigen::TensorMap<Tensor<float,3>>dx(dv.data(),nx-2,ny-2,nz-1);
+    float minvel = param.minvel;
+    float maxvel = param.maxvel;
+    for(int k=0;k<nz-1;k++){
+    for(int j=0;j<ny-2;j++){
+    for(int i=0;i<nx-2;i++){
+        if(dx(i,j,k) > 0.5) dx(i,j,k) = 0.5;
+        if(dx(i,j,k) < -0.5) dx(i,j,k) = -0.5;
+        float temp = dx(i,j,k) + vsf(i+1,j+1,k);
+        if(temp > maxvel && maxvel > 0.0) temp = maxvel;
+        if(temp < minvel && minvel > 0.0) temp = minvel;
+        vsf(i+1,j+1,k) = temp;
+    }}}
 }

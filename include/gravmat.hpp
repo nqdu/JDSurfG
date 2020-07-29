@@ -1,7 +1,25 @@
 #pragma once
 #include<iostream>
 #include<string>
-#include"defmod.hpp"
+#include"coo_matrix.hpp"
+//=== Random observation system, all variables are in Observation-Centred Coordinate System
+class OBSSphGraRandom{
+    public:
+    int   np;     //=== number of observation grids in x, y, directions ===
+	float  z0;	//=== observation elevation
+    float  *lon, *lat; //=== observation lon/lat
+
+	float *Gr; //=== Observered gravtiy in radial direction.
+
+    int  israd; //=== Flag for lon/lat (ISRAD=0) or lonrad/colatrad/r (ISRAD=1)====
+
+    ~OBSSphGraRandom(){
+        delete[] Gr; delete[] lon; delete[] lat;
+    }
+
+    void chancoor(int flag);
+    void read_obs_data(std::string filename);
+};
 
 /*	This model is used to compute gravity effects*/
 class MOD3DSphGra{
@@ -26,4 +44,4 @@ class MOD3DSphGra{
 
 void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<float> &smat);
 void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    coo_matrix<float> &smat,int nthreads = 4);
+                    coo_matrix<float> &smat);

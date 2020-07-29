@@ -1,4 +1,5 @@
 #include<math.h>
+#define pi 3.1415926535898
 /*
     Convert geographic latitude to geocentric latitude
     hlat (input) = geographic latitude in radians (north positive)
@@ -6,7 +7,7 @@
 */
 double geogra2geocenlat(double hlat)
 {
-    double halfpi = 1.570796327;
+    double halfpi = 0.5 * pi;
     double x;
 
     if ((halfpi - fabs(hlat)) >= 0.05) {    //===far away from the pole==
@@ -30,7 +31,7 @@ double geogra2geocenlat(double hlat)
 //---------------------------------------------------------------------
 double  geocen2geogralat(double hlat)
 {
-    double halfpi = 1.570796327;
+    double halfpi = 0.5 * pi;
     double glatinv;
     if( (halfpi - fabs(hlat)) >= 0.05){
         //glatinv = atan(sin(hlat)/cos(hlat)/0.993277);
@@ -53,7 +54,7 @@ double compute_length(double colatErad, double lonErad, double RE,
                     double colatSrad, double lonSrad, double RS )
 {
     double R = 6371.0;
-    double PIhalf = 1.5707963;
+    double PIhalf = 0.5 * pi;
     double Lates, Lones, Res, rep, d2;
     double latErad, latSrad;
     double length;

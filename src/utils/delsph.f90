@@ -1,4 +1,14 @@
+module distance
+implicit none
+PUBLIC :: delsph
+contains
 subroutine delsph(flat1,flon1,flat2,flon2,del)bind(c,name="delsph")
+    !!---------------------------------------------------------
+    !! compute epicenter distance(km) for two points
+    !! parameters:
+    !!  flat1,flat2     : colat, in rad
+    !!  flon1,flon2     : longitude, in rad
+    !!  del             : epicenter distance, km
     use,intrinsic :: iso_c_binding
     implicit none
     real(c_float),parameter:: R=6371.0
@@ -6,7 +16,7 @@ subroutine delsph(flat1,flon1,flat2,flon2,del)bind(c,name="delsph")
     real(c_float),value,INTENT(In) :: flat1,flat2,flon1,flon2
     real(c_float),INTENT(OUT) :: del
   
-    real(c_float) dlat,dlon,lat1,lat2,a,c
+    real(c_float)   ::  dlat,dlon,lat1,lat2,a,c
   
     dlat=flat2-flat1
     dlon=flon2-flon1
@@ -15,5 +25,6 @@ subroutine delsph(flat1,flon1,flat2,flon2,del)bind(c,name="delsph")
     a=sin(dlat/2)*sin(dlat/2)+sin(dlon/2)*sin(dlon/2)*cos(lat1)*cos(lat2)
     c=2*atan2(sqrt(a),sqrt(1-a))
     del=R*c
-  end subroutine
+end subroutine
+end
   

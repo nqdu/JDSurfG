@@ -18,6 +18,7 @@ module lsmrDataModule
    implicit none
  
    intrinsic                   ::      selected_real_kind
+   !nqdu
    integer(c_int),  parameter, public :: dp = c_float
    real(dp), parameter, public :: zero = 0.0_dp, one = 1.0_dp
  
@@ -68,6 +69,7 @@ module lsmrblasInterface
  
  end module lsmrblasInterface
  
+!nqdu
 module lsmr_coo_matrix
 contains
 subroutine aprod(mode, m, n, x, y, lenrw, rw,col,val)
