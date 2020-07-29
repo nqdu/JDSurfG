@@ -12,6 +12,4 @@ To do List (from easy to hard)
 
 6. Utilization of higher mode surface wave dispersion.
 
-7. Analytical formulae of 1-D surface wave Frechet kernel
-
-8. A more general API for more than two kinds of geophysical datasets.
+7. A more general API for more than two kinds of geophysical datasets.
