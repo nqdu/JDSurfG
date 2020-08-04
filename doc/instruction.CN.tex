@@ -10,18 +10,20 @@
 \usepackage{xcolor}
 \usepackage{enumerate}
 \usepackage[colorlinks,linkcolor=blue]{hyperref}
+\setmonofont{Consolas}
 
 \lstset{
-    columns=fixed,       
-    numbers=left,                                        % 在左侧显示行号
-    frame=none,                                          % 不显示背景边框
-    backgroundcolor=\color[RGB]{245,245,244},            % 设定背景颜色
-    keywordstyle=\color[RGB]{40,40,255},                 % 设定关键字颜色
-    numberstyle=\footnotesize\color{darkgray},           % 设定行号格式
-    commentstyle=\it\color[RGB]{0,96,96},                % 设置代码注释的格式
-    stringstyle=\rmfamily\slshape\color[RGB]{128,0,0},   % 设置字符串格式
-    showstringspaces=false,                              % 不显示字符串中的空格
-    language=bash,                                        % 设置语言
+    basicstyle          =   \sffamily,          % 基本代码风格
+    keywordstyle        =   \bfseries,          % 关键字风格
+    commentstyle        =   \rmfamily\itshape,  % 注释的风格，斜体
+    stringstyle         =   \ttfamily,  % 字符串风格
+    flexiblecolumns,                % 别问为什么，加上这个
+    numbers             =   left,   % 行号的位置在左边
+    showspaces          =   false,  % 是否显示空格，显示了有点乱，所以不现实了
+    numberstyle         =   \zihao{-5}\ttfamily,    % 行号的样式，小五号，tt等宽字体
+    showstringspaces    =   false,
+    captionpos          =   t,      % 这段代码的名字所呈现的位置，t指的是top上面
+    frame               =   lrtb,   % 显示边框
 }
 
 \title{JDSurfG 使用说明}
@@ -101,7 +103,7 @@
        \item 第？行 是否进行检测板测试？如果是填1
        \item ？  noiselevel, 加入噪声的大小(注意此处是和数据的相对大小):
        \[   
-           d_i = d_{syn} + (d_{syn} * noiselevel * N(0,1))
+           d^i = d_{syn}^i + (d_{syn}^i * noiselevel * N(0,1))
         \]
    \end{itemize}
 
@@ -109,7 +111,18 @@
    例子中初始模型和检测板模型文件分别为MOD和MOD.true, 这两个文件格式稍有不同。主要差别在第一行上。\\
    MOD: 第一行存放所有z方向节点的位置(km)。MOD.true不用放。
    之后的行存放输入的速度模型：每一行，存放一个给定深度的，每个给定经度的，所有纬度上的速度(km/s)。
-   即速度按行优先方法存为 V(nz,nlon,nlat)。第i行存放 V(:,:,i);
+   具体来说，若速度存为 V(nz,nlon,nlat),则存储的顺序为：
+   \begin{lstlisting}[language=c++]
+    //c++
+    for(int i=0;i<nz;i++){
+    for(int j=0;j<nlon;j++){
+        for(int k=0;k<nlat;k++){
+            fprintf(fileptr,"%f ",V(i,j,k));
+        }
+        fprintf(fileptr,"\n");
+    }} 
+ \end{lstlisting}
+
 
    \subsection{频散数据文件}
    例子中频散数据文件为surfdataSC.dat,用于存放面波频散数据(台站间距/面波走时)。 
@@ -282,7 +295,8 @@
     \subsection{面波走时正演计算的网格间距}
     由于使用的网格不一定能准确计算面波走时，因此在计算过程中，需要
     用一套新的网格来进行走时正演计算。该计算网格是通过将模型网格进一步划分来实现的，即通过
-    在模型网格中间插入一些新的点。这些新的点连同模型网格构成一个新的计算网格。插入的点数可以在
+    在模型网格中间插入一些新的点。这些新的点连同模型网格构成一个新的计算网格,新网格上的速度
+    大小通过3次均匀B样条逼近得到。插入的点数可以在
     src/SurfaceWave/sphfmm.f90 的synthetic和CalFrechet函数中修改(参数gdx和gdy，默认为8)。
     纬度和经度方向分别插入的点数为gdx+1和gdy+1，插入这些点后，计算网格将在
     纬度方向和经度方向分别有(nlat-1) * gdx +1 和 (nlon+1) * gdy + 1个节点，
