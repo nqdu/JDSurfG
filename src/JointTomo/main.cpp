@@ -143,7 +143,7 @@ int main(int argc, char* argv[]){
         outfile.close();
 
         // save current model
-        resfile="results/mod_iter"+std ::to_string(iter+1)+".dat";
+        resfile="results/joint_mod_iter"+std ::to_string(iter+1)+".dat";
         outfile.open(resfile);
         for(int k=0;k<nz;k++){
         for(int j=0;j<ny;j++){
