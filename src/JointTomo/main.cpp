@@ -85,7 +85,7 @@ int main(int argc, char* argv[]){
 
    // save initial model
     int nx = tomo.mod.nx, ny = tomo.mod.ny,nz=tomo.mod.nz;
-    std::string resfile="results/mod_iter"+ std::to_string(0) +  ".dat";
+    std::string resfile="results/joint_mod_iter"+ std::to_string(0) +  ".dat";
     outfile.open(resfile);
     for(int k=0;k<nz;k++){
     for(int j=0;j<ny;j++){
