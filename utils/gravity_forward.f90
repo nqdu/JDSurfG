@@ -97,7 +97,8 @@ program main
   ALLOCATE(vr(nx,ny,nz),vt(nx,ny,nz))
 
   ! read reference model,format is same to MOD
-  refmod='MOD.ref'
+  ! you could change it to your own reference file
+  refmod='MOD'
   open(11,file=refmod)
   read(11,*)(vr(0,0,i),i=1,nz)
   do k=1,nz
