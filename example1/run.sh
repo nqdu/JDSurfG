@@ -11,4 +11,4 @@
 
 # run joint inversion
 # use ../bin/JointTomo -h for help
-../bin/DSurfTomo JointSG.in surfdataSC.dat obsgrav.dat gravmat.dat MOD MOD MOD.true
+../bin/JointTomo JointSG.in surfdataSC.dat obsgrav.dat gravmat.dat MOD MOD MOD.true
