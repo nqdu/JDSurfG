@@ -159,7 +159,7 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
         lat[i]=uly-i*dy;
 
     //read synflag
-    for(i=0;i<6;i++)
+    for(i=0;i<5;i++)
         getline(fp,line);
     sscanf(line.c_str(),"%d",&kmax); //kmaxRc
     if(kmax>0){
@@ -196,7 +196,7 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     else{
         getline(fp,line);
     }   
-
+    
     sscanf(line.c_str(),"%d",&synflag);
     fp.close();
 
