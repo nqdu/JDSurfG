@@ -1,4 +1,4 @@
-SUBDIRS	= src/surftomo src/gravity src/JointTomo
+SUBDIRS	= src/surftomo src/gravity src/JointTomo utils
 .PHONY: subdirs $(SUBDIRS)
 
 subdirs: $(SUBDIRS)
