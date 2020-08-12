@@ -1,0 +1,17 @@
+33 36 25                          c: nx ny nz (grid number in lat lon and depth direction)
+35.3 99.7                     c: goxd gozd (upper left point,[lat,lon])
+0.3 0.3                      c: dvxd dvzd (grid interval in lat and lon direction)
+5.0 0.5                        c: weight damp
+3                                c: sublayers (for computing depth kernel, 2~5)
+2.0 4.7                           c: minimum velocity, maximum velocity (a priori information)
+10                                c maxiteration
+19                              c: kmaxRc (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0 36.0 38.0 40.0 
+19                              c: kmaxRg (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0 36.0 38.0 40.0 
+0                              c: kmaxLc (followed by periods)
+0                              c: kmaxLg (followed by periods)
+1                                c: synthetic flag(0:real data,1:synthetic)
+0.02 0.02                            c: noiselevel
+0.5				c : weight parameter for 2 data, 0-1
+0.05 1
