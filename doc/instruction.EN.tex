@@ -1,10 +1,8 @@
-\documentclass[10p,UTF8]{ctexart}
+\documentclass[UTF8]{article}
 \usepackage{amsmath}
 \usepackage{setspace}
 \usepackage{caption}
-%\usepackage{subfigure}
 \usepackage{graphicx, subfig}
-\usepackage{float}
 \usepackage{indentfirst}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -12,19 +10,20 @@
 \usepackage[colorlinks,linkcolor=blue]{hyperref}
 
 \lstset{
-    columns=fixed,       
-    numbers=left,                                        % 在左侧显示行号
-    frame=none,                                          % 不显示背景边框
-    backgroundcolor=\color[RGB]{245,245,244},            % 设定背景颜色
-    keywordstyle=\color[RGB]{40,40,255},                 % 设定关键字颜色
-    numberstyle=\footnotesize\color{darkgray},           % 设定行号格式
-    commentstyle=\it\color[RGB]{0,96,96},                % 设置代码注释的格式
-    stringstyle=\rmfamily\slshape\color[RGB]{128,0,0},   % 设置字符串格式
-    showstringspaces=false,                              % 不显示字符串中的空格
-    language=bash,                                        % 设置语言
+    basicstyle          =   \sffamily,          % code style
+    keywordstyle        =   \bfseries,          % keyword 风格
+    commentstyle        =   \rmfamily\itshape,  % style of comments
+    stringstyle         =   \ttfamily,  % style of strings
+    flexiblecolumns,                % 
+    numbers             =   left,   % location of line number
+    showspaces          =   false,  % 
+    numberstyle         =   \tiny \ttfamily,    
+    showstringspaces    =   false,
+    captionpos          =   t,     
+    frame               =   lrtb,   % frame
 }
 
-\title{User Manual of JDSurfG}
+\title{Manual of JDSurfG}
 \author{Nanqiao Du}
 \date{\today}
 
@@ -33,157 +32,240 @@
    \tableofcontents
    \newpage
    \section{Introduction}
-   JDSurfG 包含了三个模块，分别用来计算球坐标系下的重力矩阵，直接面波反演和面波-重力联合反演。
-   其中重力部分基于自适应Gauss-Legendre数值积分方法，面波部分基于面波一步法计算面波走时敏感核。
-   该方法通过岩石物理中的经验关系式构建S波速度和密度的转换公式，从而将重力数据和面波走时数据
-   统一到一个反演框架中。该方法能够用来反演地壳-上地幔内的S波速度结构。
+   This document describes how to use JDSurfG package to perform 3-D joint inversion of 
+   shear wave velocity in crust and upper mantle. This package contains 3 modules, which are 
+   used to compute gravity matrix in spherical coordinates, conduct direct surface wave 
+   tomography, and perform tomographic joint inversion of dispersion and gravity data 
+   respectively. Obviously, this kind of joint inversion is based on one-step surface wave 
+   inversion to compute 3-D (pseudo) sensitivity kernel of surface waves, and the adaptive 
+   Gauss-Legendre integration method is utilized to handle the gravity part. Based on 
+   empirical relations between seismic velocity and density of rocks, this package would be 
+   a nice tool to investigate 3-D shear wave structure in the crust and upper mantle.\\
 
-   该程序由c++和Fortran混编写成，用c++来构建反演框架，封装数据，处理I/O，并计算重力矩阵和
-   面波一维敏感核，Fortran主要负责计算面波走时和面波二维敏感核。
+   This package is written by \verb!C++! and \verb!Fortran!. \verb!C++! is responsible for the main logic such as 
+   handling I/O, providing useful data structures and also is used to compute 1-D surface 
+   wave frechet kernel. And the \verb!Fortran! part, derived from Hongjian Fang's 
+   \href{https://github.com/HongjianFang/DSurfTomo/tree/stable/src}{DSurfTomo} package 
+   with several modifications, is used to compute surface wave traveltimes and corresponding
+   2-D sensitivity kernels.\\
+
+   I should note that this package was only tested by a small part of people on similar computational
+   conditions, so there might be some bugs contained in it. I'd appreciate to receive bug reportings 
+   and modify some part of it if good suggestions. In the long term, I would add some new functions 
+   to this package, you could see the TODO LIST in README.
 
    \section{Preliminaries}
-   该程序使用\href{http://eigen.tuxfamily.org/index.php?title=Main_Page}{Eigen}来进行多维
-   数组的存取，并用\href{http://www.gnu.org/software/gsl/}{GSL}库来计算Gauss-Legendre节点
-   的位置和权重。因此务必在您的计算机上装好这两个库。同时，请确保您的g++编译器
-   支持c++11标准(gcc $\geq$4.8.1)。
+   This package utilize \verb!C++!  library \href{http://eigen.tuxfamily.org/index.php?title=Main_Page}{Eigen}
+   to handle multi-dimensional arrays, and \href{http://www.gnu.org/software/gsl/}{GSL} to compute 
+   Gauss-Legendre nodes and weights. So you need to install these two libraries in your own 
+   computers before compiling this package. Also, you should make sure that your \verb!C++! compiler 
+   support \verb!C++-11! standards (gcc >= 4.8).
 
-    \section{Installation}
-    下载.zip包之后，按如下方式解压
+   \section{Installation}
+   After you finish downloading the .zip file from Github, you can unzip it by using:
     \begin{lstlisting}[language=bash]
-        unzip JDSurfG.zip
+    unzip JDSurfG.zip
     \end{lstlisting}
-    如果您没有将Eigen和GSL的include (或) lib文件夹添加到环境变量中，那么请在JDSurfG/include/Makefile中添加
-    他们的路径,例如：
-    \begin{lstlisting}[language=c]
-        path_to_eigen= -I/path-to-eigen
-    \end{lstlisting}
-    之后，通过如下方式编译
+   Before preceding to compile this package, you should add the Include path of Eigen and GSL 
+   and the Library path of GSL in \verb!JDSurfG/include/Makefile! if you don't modify your 
+   \verb!~/.bashrc! when you install these two libraies. For example:
+   \begin{lstlisting}[language=c]
+    path_to_eigen= -I/path-to-eigen
+\end{lstlisting}
+
+    Then compile this package by:
     \begin{lstlisting}[language=bash]
         cd JDSurfG
         make
     \end{lstlisting}
-    之后，你会惊人地发现在bin文件夹下，会出现三个可执行文件
+    Finally you will find three excecutable files in the directory \verb!bin/!
     \begin{lstlisting}[language=bash]
-       mkmat DSurfTomo JointSG  
-    \end{lstlisting}
+        mkmat DSurfTomo JointSG  
+     \end{lstlisting}
+    
+     \section{Direct Surface Wave Tomography Module}
+     This module need 3 (4 if checkerboard or other test is required) input files:
+     \begin{itemize}
+        \item \verb!DSurfTomo.in!: contains information of input model, dispersion data and inversion parameters.
+        \item \verb!surfdataSC.dat!: dispersion data for each station pair
+        \item \verb!MOD!: Initial model
+        \item \verb!MOD.true!: True model (if additional tests are required )
+    \end{itemize}
+    There are some points to note before we precede to the format of each file:
+    \begin{enumerate}[(1)]
+         \item Input model is homogeneous in latitudinal and longitudinal direction, but 
+                the grid size could vary in depth direction.
+        \item The input model should be slightly larger than the inversion one in order to 
+              perform B-spline smoothing for forward computation. To be specific,
+              if we need to invert model in region $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$, 
+              we need a input model in region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1-dz)$.
+         \item Stations should be far away from invert model boundaries, or some warning will be given during 
+                you running this package. This is because there would be errors if surface wave train travel 
+                along the boundaries.
+    \end{enumerate}
+    Now there are the formats of every file below:
+    \subsection{Parameter File}
+    The parameter file is called \verb!DSurfTomo.in! in this instruction. It is a self-explanatory file.
+    Here is a template of file below: \\
+    \\
+    \\
+\begin{lstlisting}[language=c]
+33 36 25      c: nx ny nz (grid number in lat lon and depth direction)
+35.3 99.7     c: goxd gozd (upper left point,[lat,lon])
+0.3 0.3       c: dvxd dvzd (grid interval in lat and lon direction)
+10.0 2        c: weight damp
+3             c: sublayers (computing depth kernel, 2~5)
+2.0 4.7       c: minimum velocity, maximum velocity
+10            c: maximum iteration
+10            c: kmaxRc (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 
+10            c: kmaxRg (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 
+0             c: kmaxLc (followed by periods)
+0             c: kmaxLg (followed by periods)
+1             c: synthetic flag(0:real data,1:synthetic)
+0.02          c: noiselevel
+\end{lstlisting}
+    \begin{enumerate}
+        \item [line 1] grid points in \textbf{latitude},\textbf{longitude}
+                    and in \textbf{depth}
+        \item[line 2] lat and lon in upper left point (Note this is the upper left point of input 
+                    model instead of the inversion one!)
+        \item[line 3] grid interval in lat and lon direction 
+        \item[line 4] 2-th order Tikhonov regularization parameter and damp.
+        \item[line 5] change grid-based model to layer-based model, insert sublayer layers between 
+                      adjacent grids. Usually 3 is enough. 
+        \item[line 6] minimum and maximum velocity permitted in inversion.
+        \item[line 7] maximum iteration
+        \item[line 8] no. of Rayleigh wave phase velocity disperion period used.
+        \item[line 9] if the number in line 8 isn't zero, then list all the periods. If not,
+                      list Rayleigh wave group velocity periods, and then Love phase, Love group.
+        \item[line ?] conduct checkerboard test? if so, set it to 1.
+        \item[line ?]  noiselevel, the relative amplitude of noise。
+        \[   
+            d^i = d_{syn}^i + (d_{syn}^i * noiselevel * N(0,1))
+         \]
+    \end{enumerate}
 
-   \section{面波直接反演模块}
-   该模块需要三个输入文件(如果需要做检测版，则需要四个):
-   \begin{itemize}
-       \item DSurfTomo.in: 包含模型信息、使用的频散的信息，阻尼等
-       \item surfdataSC.dat : 面波频散数据
-       \item MOD: 初始模型
-       \item MOD.true: 检测板模型
-   \end{itemize}
-   在说明输入格式之前，有几点注意的地方:
-   \begin{enumerate}[(1)]
-        \item 该模型在经纬度方向是均匀网格，在深度方向的网格间距可以变化
-       \item 输入的模型要比反演区域大，具体来说，如果需要反演的区域在区域:
-              $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$之间，则输入模型的区域是:
-              $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1-dz)$
-        \item 台站不要放在模型边界区域。不然有可能射线追踪时部分射线跑到模型边界上，引起计算误差。
-   \end{enumerate}
-   下面分别说明几个文件的输入格式:
-   \subsection{参数文件}
-   例子中的参数文件为 DSurfTomo.in，它是一个self-explantory的文件，
-   \begin{itemize}
-       \item 第1行 三个数依次是\textbf{纬度方向节点个数}，\textbf{经度方向节点个数}
-                   以及\textbf{深度方向节点个数}
-       \item 第2行 左上角位置的经纬度(注意这是\textbf{输入模型}的左上角！)
-       \item 第3行 纬度、经度网格间距(度)
-       \item 第4行 反演的正则化系数和阻尼
-       \item 第5行 因为输入模型是网格节点，需要将其转换为层状介质计算频散，该参数表示将节点变为层状介质需要在节点间插入几层，
-                    通常来讲取为3足够。
-       \item 第6行 模型的最大和最小速度
-       \item 第7行 最大迭代次数
-       \item 第8行 使用的全部Rayleigh波相速度周期个数,如果没使用则置零。
-       \item 第9行 如果8不为0，将所有周期列出来，否则依次进行Rayleigh群速度，Love相速度、群速度
-       \item 第？行 是否进行检测板测试？如果是填1
-       \item ？  noiselevel, 加入噪声的大小(注意此处是和数据的相对大小):
-       \[   
-           d_i = d_{syn} + (d_{syn} * noiselevel * N(0,1))
-        \]
-   \end{itemize}
+    \subsection{Initial Model and True Model File}
+    The initial and True model are called \verb!MOD! and \verb!MOD.true! respectively in this instruction.\\
+    These is only minor difference between these two files, where the first line of \verb!MOD!
+     are depth of every grid nodes in depth direction. And this line don't exist in \verb!MOD.true!.\\
 
-   \subsection{初始模型和检测板模型文件}
-   例子中初始模型和检测板模型文件分别为MOD和MOD.true, 这两个文件格式稍有不同。主要差别在第一行上。\\
-   MOD: 第一行存放所有z方向节点的位置(km)。MOD.true不用放。
-   之后的行存放输入的速度模型：每一行，存放一个给定深度的，每个给定经度的，所有纬度上的速度(km/s)。
-   即速度按行优先方法存为 V(nz,nlon,nlat)。第i行存放 V(:,:,i);
+    The subsequent lines of \verb!MOD! are shear wave velocities. If we store the velocity with the 
+    format V(nz,nlon,nlat), then it should be print to MOD as following:
+    \begin{lstlisting}[language=c++]
+//c++
+for(int i=0;i<nz;i++){
+for(int j=0;j<nlon;j++){
+    for(int k=0;k<nlat;k++){
+        fprintf(fileptr,"%f ",V(i,j,k));
+    }
+    fprintf(fileptr,"\n");
+}} 
+  \end{lstlisting}
 
-   \subsection{频散数据文件}
-   例子中频散数据文件为surfdataSC.dat,用于存放面波频散数据(台站间距/面波走时)。 
-   如下我们展示了该文件的前九行:\\
-    \#  31.962600 108.646000 1 2 0\\
+  \subsection{Dispersion Data File}
+  This dispersion data in \verb!example/! is surfdataSC.dat,which contains dispersions (distance/traveltime) 
+  obtained from cross-correlation of long-time noise signals of 2 stations. \\
+   Here we list its first 9 lines:\\
+   \verb!#!  31.962600 108.646000 1 2 0\\
     33.732800 105.764100 3.0840\\
     34.342500 106.020600 3.1154\\
     33.357400 104.991700 3.0484\\
     33.356800 106.139500 3.0820\\
     34.128300 107.817000 3.1250\\
     33.229300 106.800200 3.0575\\
-    \#  29.905000 107.232500 1 2 0\\
+    \verb!#! 29.905000 107.232500 1 2 0\\
     34.020000 102.060100 2.7532\\
 
-   可以看出，该文件包括面波激发台站(带\#号)和接收台站(不带\#号)。
-   对于激发台站,该行的格式为 \# lat lon period-index wavetype velotype:
-   \begin{itemize}
-       \item wavetype: 表示面波类型, Rayleigh波为2,Love 为1
-       \item velotype: 表示速度类型, 相速度为0,群速度为1
-       \item period-index: 表示该面波群/相速度的周期的序号，比如在Rayleigh相速度中用到的
-                            周期为 4s,5s,6s,7s,而该台站对之间的数据的周期是5s，
-                            则倒数三个数分别为2,2,0。
-   \end{itemize}
-   每一个激发台站后面紧跟，在该面波类型，该周期下，所有有频散数据的接收台站，每一行依次为 lat lon v。
+    It is obvious that this file contains 2 kind of stations: surface wave emitting 
+    station (with \verb!#! before each line) and receiver station (without \verb!#! in each line). \\
+    For a emitting station, the format of this line is:\\
+    \begin{center}
+        \verb!#! lat lon period-index wavetype velotype:
+    \end{center}
 
-   \subsection{运行方法}
-   将上述文件准备到一个文件夹中，进入该文件夹，命令行执行:
-   \begin{lstlisting}[language=bash]
-    ./DSurfTomo -h
-   \end{lstlisting}
-   获取帮助，然后按提示输入即可。
-
-   \subsection{输出文件}\label{面波输出文件}
-   该程序共有两个输出文件夹: kernel/和results/,在kernel中保存了面波伪3-D敏感核文件,results中
-   保存了每一次迭代后的模型文件和面波走时文件。下面逐次介绍两个文件夹。
-   \begin{itemize}
-    \item 文件夹kernel: 保存了面波伪3-D敏感核。其中txt文件个数=并行使用的线程数(见\ref{线程数} 节)，编号从0开始。
-           每一个txt文件的格式是：数据编号,模型参数编号(只包括要反演的部分)以及敏感核的大小。
-    \item 文件夹results:保存了每一次迭代的模型文件(mod\_iter\*)以及面波走时文件(res\*.dat)。
-            其中模型文件的格式为:经度、纬度、深度、S波速度。面波走时文件的格式为:台站间距，观测
-            到时、理论到时。
-    \end{itemize}
-
-   \section{联合反演模块}
-   该模块需要4-6个输入文件:
     \begin{itemize}
-        \item JointSG.in: 包含模型信息、使用的频散的信息，阻尼,联合反演权重等。
-        \item surfdataSC.dat : 面波频散数据。
-        \item obsgrav.dat : 重力异常数据。
-        \item gravmat.dat : 重力异常对密度的敏感核矩阵。
-        \item MOD: 初始模型。
-        \item MOD.true: 检测板模型，用于检测板测试。
-        \item MOD.ref : 速度参考模型，用于计算重力异常理论值。
+        \item wavetype: the type of surface wave, for Rayleigh it is 2,and 1 for Love wave.
+        \item velotype: velocity type, 0 for phase velocity and 1 for group velocity.
+        \item period-index: The period index number.
     \end{itemize}
-    下面逐次介绍这几个文件。
+    For example, if we use dispersion for Rayleigh phase velocity 
+    at periods 4s,5s,6s,7s,and this line contains information only at 5s, then the last 3 numbers 
+    are 2,2,0.\\
 
-    \subsection{参数文件}
-    JointSG.in和DSurfTomo.in的文件格式基本相同。不同之处在于最后两行。为了理解其参数的意义，
-    这里列出了联合反演的misfit function:
+    Then the following lines contain all the receiver station who you have successfully extracted
+    signals from at this period, this wave type and this velocity type. And the format of each line 
+    is:
+    \begin{center}
+        latitude longitude velocity.
+    \end{center} 
+    
+
+    \subsection{Run This Module}
+    After you prepare all these required files in a folder, then you could enter into this folder,
+    and print in your shell:
+    \begin{lstlisting}[language=bash]
+    ./DSurfTomo -h
+    \end{lstlisting}
+    Then you could type in all required files according to the order on the screen.
+
+    \subsection{Output Files}\label{surface wave output files}
+    This module will output 2 folders: \verb!kernel/! and \verb!results/!. \\
+
+    In \verb!kernel/!, there are 3-D pseudo sensitivity kenrels, and \verb!results/! contains 
+    all the models after every iteration. Here are information about the format of these files:
+
+    \begin{itemize}
+    \item \verb!kernel/!: 3-D pseudo sensitivity kernel. The number of txt files is 
+    equal to no. of threads used in your program (see \ref{number of threads}),and start from 0.
+    the format of every txt file is : data-index,model-index(only one needs to be inverted) and 
+    the value of the kernel.
+
+    \item \verb!results/!:contains models (\verb!mod_iter*!)
+                        and surface wave travel time (\verb!res*.dat!) of each iteration. The format 
+                        of model files is: lon lat depth S-wave, and the format of 
+                        traveltime file is: interstation distance, observed traveltime and 
+                        synthetic traveltime for current model.
+    \end{itemize}
+
+    \section{Joint Inversion Module}
+    This module need 4-6 files in total:
+    \begin{itemize}
+        \item \verb!JointSG.in!: contains information of input model, dispersion data and inversion parameters.
+        \item \verb!surfdataSC.dat!: surface wave dispersion data
+        \item \verb!obsgrav.dat!: Gravity anomaly dataset
+        \item \verb!gravmat.dat!: sensitivity kernel of gravity to density
+        \item \verb!MOD!: Initial mode.
+        \item \verb!MOD.true!: Checkerboard model.
+        \item MOD.ref : Gravity reference model, used for compute gravity anomaly.
+    \end{itemize}
+    Here are the formats of each file.
+
+    \subsection{Parameter File}
+    The difference between \verb!JointSG.in! and \verb!DSurfTomo.in! is little except
+    last two lines.\\
+
+
+    In order to know how it works, here list the cost function of joint inversion:
     \[
         L = \frac{p}{N_1 \sigma_1^2} (d_1- d_1^o)^2 + 
             \frac{1-p}{N_2 \sigma_2^2} (d_2- d_2^o)^2 \tag{1}
     \]
     \begin{itemize}
-        \item 倒数第二行: 参数p， 介于0-1之间，p=0表示重力单独反演。由于位场反演不唯一性较高，
-                        p值通常取得比0.5大。
-        \item 倒数第一行 : 面波和重力的均方差。
+        \item last but two line: parameter p, which is in [0,1],p=0 is equivalent to 
+                                inversion by gravity only, and, respectively, p=1 means 
+                                inversion by surface wave.
+        \item last line: $\sigma$ for surface wave and gravity, respectively.
     \end{itemize}
 
-    \subsection{重力数据文件}
-    重力数据文件比较简单，将所有重力数据，按照每行分别为经度，纬度和该点的重力异常排成一个文件
-    即可。
-    下面给出了该文件前9行：\\
-    100.000000 35.000000 -224.206921\\
+    \subsection{Gravity Data File}
+    The format of this file is quite simple, just print all the gravity data to this file.
+    Each line of it contains the longitude,latitude and gravity anomaly at this point. \\
+
+    Here I list the first 9 lines of this file to give you an example:\\
+    100.000000 35.000000 -224.206921!\\
     100.000000 34.950000 -224.110699\\
     100.000000 34.900000 -241.774731\\
     100.000000 34.850000 -240.245968\\
@@ -193,98 +275,102 @@
     100.000000 34.650000 -241.357250\\
     100.000000 34.600000 -260.059429\\
 
-    \subsection{重力矩阵文件}
-    该文件通过重力模块生成(见第6节)
+    \subsection{Gravity Matrix File}
+    This file is generated by gravity modeul (refer to 6-th chapter).
 
-    \subsection{速度参考模型}
-    由于使用的重力异常是重力绝对大小相对正常椭球体的重力异常。因此在实际计算中，需要归算到局部异常
-    中。因此，在程序中对观测值进行了去均值处理。每次迭代时，计算理论重力异常的方法分三步:
+    \subsection{Gravity Reference Model File}
+    Based on the definition of gravity anomaly, it is the perturbance according 
+    to a normal elliptoid. Thus we need to convert it to local anomalies in our research 
+    area. In fact, we remove the average value of oberserved anomalies. In each iteration, 
+    there are 3 steps to compute relative anomalies:
     \begin{itemize}
-        \item 计算当前模型与参考模型分别对应的密度值。
-        \item 计算密度异常，之后用重力密度矩阵获取该异常对应的重力值。
-        \item 对所获得的重力异常去均值。
+        \item Compute density distribution of current S-wave model and reference model (through
+            empirical relations).
+        \item Compute density anomaly, then utilize gravity matrix to get gravity anomalies.
+        \item Remove average value of the results of previous step.
     \end{itemize}
-    该模型可以用第三方密度模型代替，也可以用程序默认的处理(对初始模型的每个深度求平均值)。
+    This model could be a user self-defined model, and you could also use the 
+    default one (the average of initial model in every depth.)
 
-    \subsection{运行方法}
-    将上述文件准备到一个文件夹中，进入该文件夹，命令行执行:
+    \subsection{Run This Module}
+    After you prepare all these required files in a folder, then you could enter into this folder,
+    and print in your shell:
     \begin{lstlisting}[language=bash]
-     ./JointSG -h
+    ./JointSG -h
     \end{lstlisting}
-    获取帮助，然后按提示输入即可。
+    Then you could type in all required files according to the order on the screen.
 
-    \subsection{输出文件}
-    该程序共有两个输出文件夹: kernel/和results/。其中kernel的格式与\ref{面波输出文件} 节一致。\\
-    文件夹results:保存了每一次迭代的模型文件(joint\_mod\_iter\*),面波走时文件(res\_surf\*.dat),和
-    重力异常文件(res\_grav*.dat)。面波走时文件和模型文件和 \ref{面波输出文件} 节一致，重力异常文件的格式
-    为:重力异常观测值，重力异常理论值。
- 
+    \subsection{Output Files}
+    This module will output 2 folders: \verb!kernel/! and \verb!results/!. \\
 
-    \section{重力模块}
-    该模块需要如下几个输入文件:
+    The format of \verb!kernel/! is the same as the files in \ref{surface wave output files}.
+    In the folder \verb!results/!, it contains models (\verb!joint_mod_iter*!), 
+    surface wave travel time (\verb!res_surf*.dat!) and graivty anomaly (\verb!res_grav*.dat!) 
+    of each iteration. The format of gravity anomaly is:
+    \begin{center}
+        Observed-anomalies Synthetic-anomalies
+    \end{center}
+
+    \section{Gravity Module}
+    This module requires 3 input files:
     \begin{itemize}
-        \item JointSG.in 或 DSurfTomo.in : 包含模型网格信息
-        \item MOD(和MOD.true) : 初始速度模型和真实速度模型
-        \item obsgrav.dat : 重力数据观测值和相应的经纬度
+        \item \verb!JointSG.in! or \verb!DSurfTomo.in!: contains model information
+        \item MOD(and MOD.true) : Initial model and true model.
+        \item obsgrav.dat: contains coordinates of each obeservation points.
     \end{itemize}
-    上述格式在之前已经说明过，在此不再赘述。
+    These formats have been illustrated in previous chapters.
 
-    \subsection{运行方法}
-    将上述文件准备到一个文件夹中，进入该文件夹，命令行执行:
+    \subsection{Run This Module}
+    After you prepare all these required files in a folder, then you could enter into this folder,
+    and print in your shell:
     \begin{lstlisting}[language=bash]
-     ./mkmat -h
+    ./mkmodel -h
     \end{lstlisting}
-    获取帮助，然后按提示输入即可。
-    \subsection{输出文件}
-    该程序共有一个输出文件:gravmat.dat。为重力异常的密度敏感核。格式为:数据编号、模型参数编号和
-    敏感核大小。
+    Then you could type in all required files according to the order on the screen.
 
+    \subsection{Output Files}
+    This module output only one file: \verb!gravmat.dat!. This is the density kernel 
+    for gravity anomaly. The format of it is:
+    \begin{center}
+        data-index model-index kernel
+    \end{center}
 
-    \section{一些小脚本}
-
-   \section{高级选项}
-    \subsection{并行使用的线程数}\label{线程数}
-    在include/openmp.hpp中有一行:
+    \section{Advanced Options}
+    \subsection{Number of Threads used in Parallel mode}\label{number of threads}
+    There are one line in \verb!include/openmp.hpp!:
     \begin{lstlisting}[language=c++]
     #define nthread 4
     \end{lstlisting}
-    将4改为其他线程数即可。
+    Change 4 to other number according to your computation environment.
 
-    \subsection{速度-密度经验关系的选择}
-    在src/utils/empirical.f90中 
-    \begin{lstlisting}[language=fortran]
-    subroutine empirical_relation(vsz,vpz,&
-        rhoz)bind(c,name="empirical_relation")
-        use,intrinsic :: iso_c_binding
-      
-        real(c_float), intent(in) ::  vsz
-        real(c_float),intent(out) ::vpz,rhoz
-      
-        vpz=0.9409 + 2.0947*vsz - 0.8206*vsz**2+ &
-                0.2683*vsz**3 - 0.0251*vsz**4
-        rhoz=1.6612*vpz- 0.4721*vpz**2 + &
-                0.0671*vpz**3 - 0.0043*vpz**4 + & 
-                0.000106*vpz**5
-      
-    end subroutine empirical_relation
-    \end{lstlisting}
-    将经验关系换为其他即可。如果要进行联合反演，注意要修改该文件中相应的导数函数。
+    \subsection{Empirical Relations}
+    in \verb!src/utils/empirical.f90! 
+\begin{lstlisting}[language=fortran]
+subroutine empirical_relation(vsz,vpz,&
+    rhoz)bind(c,name="empirical_relation")
+    use,intrinsic :: iso_c_binding
+    
+    real(c_float), intent(in) ::  vsz
+    real(c_float),intent(out) ::vpz,rhoz
+    
+    vpz=0.9409 + 2.0947*vsz - 0.8206*vsz**2+ &
+            0.2683*vsz**3 - 0.0251*vsz**4
+    rhoz=1.6612*vpz- 0.4721*vpz**2 + &
+            0.0671*vpz**3 - 0.0043*vpz**4 + & 
+            0.000106*vpz**5
+    
+end subroutine empirical_relation
+\end{lstlisting}
+    You could change this relation according to your conditions. And if you want to conduct
+    Joint inversion, please remember to change the derivative function in the same file.
 
-    \subsection{Gauss-Legendre节点个数的选择以及重力矩阵的计算范围}
-    在src/gravity/gravmat.cpp中，可以修改最大和最小节点个数，重力矩阵不为0的最大距离
-    (超过该范围的两个点之间的吸引力可以忽略不记)
+    \subsection{Mumber of Gauss-Legendre Nodes and the Sparcity of Gravity Matrix}
+    In \verb!src/gravity/gravmat.cpp!, you could modify the max and min number of nodes,
+    and the maximum distance beyond which gravity matrix is zero (The attraction between two 
+    points is negligible if beyond this distance)
     \begin{lstlisting}[language=c++]
     #define NMIN 5
     #define NMAX 256
     #define maxdis 100.0 
     \end{lstlisting}
-    
-    \subsection{面波走时正演计算的网格间距}
-    由于使用的网格不一定能准确计算面波走时，因此在计算过程中，需要
-    用一套新的网格来进行走时正演计算。该计算网格是通过将模型网格进一步划分来实现的，即通过
-    在模型网格中间插入一些新的点。这些新的点连同模型网格构成一个新的计算网格。插入的点数可以在
-    src/SurfaceWave/sphfmm.f90 的synthetic和CalFrechet函数中修改(参数gdx和gdy，默认为8)。
-    纬度和经度方向分别插入的点数为gdx+1和gdy+1，插入这些点后，计算网格将在
-    纬度方向和经度方向分别有(nlat-1) * gdx +1 和 (nlon+1) * gdy + 1个节点，
-
 \end{document}
