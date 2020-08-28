@@ -375,7 +375,6 @@ void SurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
     // renew sparse matrix meta-informations
     //smat.m = m + count;
     smat.nonzeros = nar;
-    smat.cpp2fortran();
 
     // solve equations by lsmr
     std::cout <<"solving linear systems by LSMR ..." << std::endl;

@@ -547,7 +547,6 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     // renew sparse matrix meta-informations
     //smat.m = m + count;
     smat.nonzeros = nar;
-    smat.cpp2fortran();
 
    // solve equations by lsmr
     std::cout <<"solving linear systems by LSMR ..." << std::endl;
