@@ -5,26 +5,24 @@
 
 int main(int argc,char *argv[]){
     // check input parameters
-    std::string paramfile,modfile,datafile,modtrue;
+    std::string paramfile,modfile,datafile;
+    int ierr;
     if(argc == 1 ){
         std::cout <<"NO INPUT FILES ARE given!, now use the default ones ..."<<std::endl;
         paramfile="DSurfTomo.in"; 
         datafile="obsgrav.dat";
         modfile="MOD";
-        modtrue="MOD.true";
         std::cout <<"default files are: "<<paramfile << " " << datafile
-                  << " " << modfile <<" " << modtrue <<std::endl;
+                  << " " << modfile <<std::endl;
     }
-    else if(argc == 4 || argc == 5){
+    else if(argc == 4){
         paramfile = argv[1];
         modfile = argv[3];
         datafile = argv[2];
-        modtrue = modfile +".true";
-        if(argc == 5) modtrue = argv[4];
     }
     else if (argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
-        std::cout <<"./this paramfile datafile initmod (truemod)" << std::endl;
+        std::cout <<"./this paramfile datafile denmodel " << std::endl;
         exit(0);
     }
     else{
@@ -36,7 +34,7 @@ int main(int argc,char *argv[]){
     OBSSphGraRandom obs;
 
     // read density model and gravity data
-    mod.read_model(paramfile,modfile,modtrue);
+    mod.read_model(paramfile,modfile);
     obs.read_obs_data(datafile);
 
     // init sparse matrix
@@ -50,41 +48,8 @@ int main(int argc,char *argv[]){
 
     // compute gravity matrix and synthetic gravity data
     FILE *fp;
-    if(mod.synflag){
-        std::cout << "begin to compute gravity matrix and also synthesize gravity data"
-                  << std::endl;
-        gravmat_parallel(mod,obs,smat);
-        float *x = new float [n];
-        float *y = new float [obs.np];
-        for(int i=0;i<n;i++){
-            x[i] = mod.density[i] - mod.density0[i];
-        }
-        smat.aprod(1,x,y); 
-
-        // save gravity data
-        fp = fopen("gravity.dat","w");
-        if(fp == NULL){
-            std::cout <<"cannot open file gravity.dat";
-            exit(0);
-        }
-        obs.chancoor(0);
-        for(int i=0;i<obs.np;i++){
-            int flag = fprintf(fp,"%f %f %g\n",obs.lon[i],obs.lat[i],y[i]);
-            if(flag <0){
-                printf("cannot write in gravity.dat\n");
-                exit(0);
-            }
-        }
-        fclose(fp);
-
-        // free space
-        delete[] x;
-        delete[] y;
-    }
-    else{
-        std::cout << "begin to compute gravity matrix" << std::endl;
-        gravmat_parallel(mod,obs,smat);
-    }
+    std::cout << "begin to compute gravity matrix" << std::endl;
+    gravmat_parallel(mod,obs,smat);
 
     // save gravity matrix
     fp = fopen("gravmat.dat","w");
@@ -93,7 +58,7 @@ int main(int argc,char *argv[]){
         exit(0);
     }
     for(int i=0;i<smat.nonzeros;i++){
-        fprintf(fp,"%d %d %g\n",smat.rw[i],smat.col[i],smat.val[i]);
+        ierr = fprintf(fp,"%d %d %g\n",smat.rw[i],smat.col[i],smat.val[i]);
     }
     
     fclose(fp);

@@ -13,7 +13,7 @@
 #define  degrad2 (pi/180.0)
 #define  hpi2    (pi*0.5)
 #define  rearth2 6371.0
-#define G 6.67E-6
+#define G 6.667E-6
 /*
 	Change NMAX and NSCALE bigger for more accurate results,
 	but bigger NMAX and NSCALE means much more computation.
@@ -122,8 +122,7 @@ void MOD3DSphGra :: chancoor(int flag)
 	}
 }
 
-void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
-                             std::string modtrue)
+void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile)
 {
     std::ifstream fp,fptrue;
     int i,j,k;
@@ -132,9 +131,9 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     float v,vtrue;
     std::string line;
 
+    // read parameter file
     fp.open(paramfile);
     getline(fp,line);
-
     sscanf(line.c_str(),"%d%d%d",&ny,&nx,&nz);
     nx=nx-2;
     ny=ny-2;
@@ -143,7 +142,6 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     lon = new float[nx];
     lat = new float[ny];
     dep = new float[nz];
-
     getline(fp,line);
     sscanf(line.c_str(),"%f%f",&uly,&ulx);
     getline(fp,line);
@@ -196,8 +194,6 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     else{
         getline(fp,line);
     }   
-    
-    sscanf(line.c_str(),"%d",&synflag);
     fp.close();
 
     /*---------------------------------------------------*/
@@ -206,14 +202,10 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
     for(i=0;i<nz;i++){
         fp >> dep[i];
     }
-
-    density0 = new float [n];
-
     fp >> v;
-    if(synflag==1){
-        density = new float [n];
-        fptrue.open(modtrue);
-    }
+
+    // allocate space for density
+    density0 = new float [n];
     
     // velocity model has shape (dep,lon,lat)
     float vp;
@@ -226,14 +218,9 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile,
                 if(i == 0||j == 0||k == nz||i == nx+1||j == ny+1)
                     continue;
                 empirical_relation(&v,&vp,density0+n);
-                if(synflag==1){
-                    empirical_relation(&vtrue,&vp,density+n);
-                }
             }
         }
     }
-    if(synflag == 1 )
-        fptrue.close();
     israd = 0;
     fp.close();
 }

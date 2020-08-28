@@ -39,7 +39,7 @@ class MOD3DSphGra{
     }
 
     void chancoor(int flag);
-    void read_model(std::string paramfile,std::string modinfile,std::string modtrue="nothing");
+    void read_model(std::string paramfile,std::string modinfile);
 };
 
 void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<float> &smat);
