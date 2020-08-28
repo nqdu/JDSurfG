@@ -138,12 +138,14 @@ void LsmrSolver(T *b,T *x,LSMRDict<float> &dict){
 
     // initialize x
     for(int i=0;i<n;i++) x[i] = 0.0;
+    cpp2fortran();
 
     // solve by lsmr module
     LSMR(m,n,nonzeros,rw,col,val,b,dict.damp,dict.atol,dict.btol,
         dict.conlim,dict.itnlim,dict.localSize,x,&dict.istop,
         &dict.itn,&dict.anorm,&dict.acond,&dict.rnorm,
         &dict.arnorm,&dict.xnorm);
+    cpp2fortran(true);
 }
 
 // read from a txt file
