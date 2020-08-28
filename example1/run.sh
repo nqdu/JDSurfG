@@ -4,10 +4,10 @@
 
 # generate gravity matrix
 # use ../bin/mkmat -h for help
-../bin/mkmat DSurfTomo.in obsgrav.dat MOD MOD.true
+../bin/mkmat DSurfTomo.in obsgrav.dat MOD 
 
 # then compute gravity for results of DSurfTomo
-../bin/syngrav 
+#../bin/syngrav 
 
 # run joint inversion
 # use ../bin/JointTomo -h for help
