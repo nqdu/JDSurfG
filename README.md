@@ -8,7 +8,7 @@ TODO List (from easy to hard)
 
 4. Water layers could be involved in inversion. 
 
-5. Different empirical relations for different region and different depth. 
+5. Different empirical relations for different region
 
 6. Utilization of higher mode surface wave dispersion.
 
