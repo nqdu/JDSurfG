@@ -55,8 +55,8 @@ class SurfTime
     int get_period_index(int idx,std::string wavetype);
 
     public:
-    int read_data(std::string filename);
     void TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data);
-    int FrechetKernel(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data,
+    Eigen::VectorXi FrechetKernel(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data,
                         std::string save_path);
+    void read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat);
 };

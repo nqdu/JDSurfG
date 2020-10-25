@@ -1,6 +1,7 @@
 #pragma once 
 #include<unsupported/Eigen/CXX11/Tensor>
-#include"coo_matrix.hpp"
+#include"csr_matrix.hpp"
+
 // initial model defined
 class MOD3d{
     public :
@@ -10,8 +11,9 @@ class MOD3d{
     Eigen::VectorXf lon,lat,dep;
     Eigen::Tensor<float,3> vs;
 
-    void gravity(coo_matrix<float> &A,Eigen::Tensor<float,3> &vsf,Eigen::VectorXf &dgsyn);
+    void gravity(csr_matrix<float> &A,Eigen::Tensor<float,3> &vsf,Eigen::VectorXf &dgsyn);
 
+    /*
     MOD3d & operator = (const MOD3d &md){
         nx = md.nx;
         ny = md.ny;
@@ -23,5 +25,7 @@ class MOD3d{
         vs = md.vs;
 
         return *this;
-    }
+    }*/
+
+    void add_regularization(csr_matrix<float> &smat,float smooth);
 };

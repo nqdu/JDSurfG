@@ -25,13 +25,18 @@ class JointTomoParams
     float p; // relative weight params, see Julia(2000)
 };
 
-class DSurfTomo{
+class SurfTomo{
     public:
     MOD3d mod;
     SurfTime surf;
     DSurfTomoParams param;
     Eigen::Tensor<float,3> vstrue;
     int unknowns,num_data;
+    private:
+    Eigen::VectorXi FrechetKernel(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data,
+                    std::string save_dir);
+    
+    void assemble(std::string basedir,csr_matrix<float> &smat);
     
     public:
     int readdata(std::string paramfile,std::string datafile,
@@ -56,6 +61,8 @@ class JointTomo{
     MOD3d modref; // reference model
     csr_matrix<float> gmat; // gravity forward computation matrix
 
+    Eigen::VectorXi FrechetKernel(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &dsyn,
+                std::string save_dir);
 
     void assemble(std::string basedir,Eigen::Tensor<float,3> &vsf,
                     csr_matrix<float> &smat,float weight1,float weight2);
@@ -68,4 +75,6 @@ class JointTomo{
     void checkerboard();
     void forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &dsyn,Eigen::VectorXf &dg);
     void inversion(Eigen::Tensor<float,3> &vsf,Eigen::VectorXf &dsyn,Eigen::VectorXf &dg);
+
 };
+

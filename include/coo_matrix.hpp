@@ -148,6 +148,7 @@ void LsmrSolver(T *b,T *x,LSMRDict<float> &dict){
     cpp2fortran(true);
 }
 
+/*
 // read from a txt file
 int read(std::string filename,int start_index = 0)
 {
@@ -176,4 +177,34 @@ int read(std::string filename,int start_index = 0)
 
     return idx;
 }
+*/
+
+int read(std::string filename)
+{
+    FILE *fp,*pin;
+
+    // get lines of this file
+    if((pin=popen(("wc -l " + filename).c_str(), "r"))==NULL){
+        std::cout << "cannot open file "<< filename << std::endl;
+        exit(0);
+    }
+    int non;
+    int flag = fscanf(pin,"%d",&non);
+    pclose(pin);
+
+    // read from file
+    int idx = start_index;
+    if((fp=fopen(filename.c_str(),"r"))==NULL){
+        std::cout << "cannot open file "<< filename << std::endl;
+        exit(0);
+    }
+    for(int i=0;i<non;i++){
+        int flag = fscanf(fp,"%d%d%f",rw+idx,col+idx,val+idx);
+        idx += 1;
+    }
+    fclose(fp);
+
+    return idx;
+}
+
 };

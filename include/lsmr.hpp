@@ -1,3 +1,4 @@
+#pragma once
 template<typename T>
 class LSMRDict{
     public:
@@ -8,6 +9,7 @@ class LSMRDict{
     T xnorm,rnorm;
     T damp,weight;
     int localSize;
+    bool verbose;
     
     // some parameters defined
     // you could change it according to your own settings
@@ -23,6 +25,8 @@ class LSMRDict{
         localSize = dimension;
         damp = damp0;
         weight = weight0;
+
+        verbose = false;
     }
 };
 
@@ -33,4 +37,10 @@ void LSMR(int m, int n, int lenrw, int *rw, int *col,
         float conlim, int itnlim, int localSize, float *x, 
         int *istop, int *itn, float *normA, float *condA, 
         float *normr, float *normAr, float *normx);
+
+void LSMR_csr(int m, int n, float *val,int *indices,int *indptr, 
+            float *b, float damp, float atol, float btol,
+        float conlim, int itnlim, int localSize, float *x, 
+        int *istop, int *itn, float *normA, float *condA, 
+        float *normr, float *normAr, float *normx,int verbose);
 }

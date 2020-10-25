@@ -1,7 +1,7 @@
 #pragma once
 #include<iostream>
 #include<string>
-#include"coo_matrix.hpp"
+#include"csr_matrix.hpp"
 //=== Random observation system, all variables are in Observation-Centred Coordinate System
 class OBSSphGraRandom{
     public:
@@ -28,20 +28,20 @@ class MOD3DSphGra{
     float   x0, y0, z0;
     float   *lon, *lat, *dep;
 	float   *density0, *density;
-    int synflag;
+    //int synflag;
 
 	int	israd;				//===Flag for lon/lat/dep (israd=0) or lonrad/colatrad/r (israd=1)====
 
     ~MOD3DSphGra(){
         delete[] lon; delete[] lat; delete[] dep;
-        delete[] density0; 
-        if(synflag) delete[] density;
+        //delete[] density0; 
+        //if(synflag) delete[] density;
     }
 
     void chancoor(int flag);
     void read_model(std::string paramfile,std::string modinfile);
 };
 
-void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<float> &smat);
+void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,csr_matrix<float> &smat);
 void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    coo_matrix<float> &smat);
+                    csr_matrix<float> &smat);
