@@ -24,4 +24,4 @@ gravmat.o:gravmat.cpp
 %.o: %.f90
 	gfortran -g -c $< -o $@ $(opt)
 clean:
-	rm  *.o
+	rm  *.o *.mod
