@@ -10,15 +10,16 @@ includes = -I../../include $(path_to_eigen)
 surfdir= ../SurfaceWave
 
 # c scripts
-src = $(shell find *.cpp) $(surfdir)/SurfaceWave.cpp ../utils/gaussian.cpp
+src = surftomo.cpp main.cpp $(surfdir)/SurfaceWave.cpp \
+		../utils/gaussian.cpp ../utils/bkg_model.cpp
 
 # fortran src
 f90mp=$(surfdir)/fmm.f90 $(surfdir)/sphfmm.f90 
-f90src =  ../utils/delsph.f90 ../utils/empirical.f90 ../utils/lsmrModule.f90
+f90src =  ../utils/delsph.f90 ../utils/empirical.f90 ../utils/lsmrModule_csr.f90
 f77src = $(surfdir)/surfdisp96.f
 
 # objective
-cppobj = $(src:%.cpp=%.o) 
+cppobj = $(src:%.cpp=%.o)
 fobj= $(f90src:%.f90=%.o) $(f90mp:%.f90=%.o) $(f77src:%.f=%.o) 
 
 $(out): $(fobj) $(cppobj)
@@ -28,13 +29,13 @@ $(out): $(fobj) $(cppobj)
 	$(FC) -g -c $< -o $@  $(opt)
 
 $(surfdir)/SurfaceWave.o: $(surfdir)/SurfaceWave.cpp
-	$(cc) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp
+	$(cc) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp 
 
 %.o: %.f
 	$(FC) $(FFLAGS) -g -rdynamic -c $< -o $@ $(opt)	
 
 %.o: %.cpp
-	$(cc) -g -c $(cppstd) $(includes) $(path_to_eigen) $< -o $@ $(opt)
+	$(cc) -g -c $(cppstd) $(includes) $< -o $@ $(opt)
 
 $(surfdir)/sphfmm.o: $(surfdir)/sphfmm.f90
 	$(FC) -g -c $< -o $@  $(opt) -fopenmp
@@ -42,4 +43,4 @@ $(surfdir)/sphfmm.o: $(surfdir)/sphfmm.f90
  $(surfdir)/fmm.o: $(surfdir)/fmm.f90
 	$(FC) -g -c $< -o $@  $(opt) -fopenmp
 clean:
-	rm  *.o *.mod  $(surfdir)/*.o $(surfdir)/*.mod
+	rm  *.o *.mod  $(surfdir)/*.o

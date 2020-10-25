@@ -6,7 +6,6 @@
 #include"utils.hpp"
 #include"openmp.hpp"
 #include"gravmat.hpp"
-#include<omp.h>
 #include<fstream>
 #include<stdlib.h>
 #include<math.h>
@@ -122,9 +121,9 @@ void MOD3DSphGra :: chancoor(int flag)
 	}
 }
 
-void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile)
+void MOD3DSphGra :: read_model(std::string paramfile,std::string modfile)
 {
-    std::ifstream fp,fptrue;
+    std::ifstream fp;
     int i,j,k;
     int n,kmax;
     float ulx,uly,dx,dy;
@@ -195,13 +194,14 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile)
         getline(fp,line);
     }   
     fp.close();
+    israd = 0;
 
-    /*---------------------------------------------------*/
     // read depth of velomodel
-    fp.open(modinfile);
+    fp.open(modfile);
     for(i=0;i<nz;i++){
         fp >> dep[i];
     }
+    /*
     fp >> v;
 
     // allocate space for density
@@ -210,18 +210,15 @@ void MOD3DSphGra :: read_model(std::string paramfile,std::string modinfile)
     // velocity model has shape (dep,lon,lat)
     float vp;
     for(k = 0;k < nz+1;k++){
-        for(i = 0;i < nx+2;i++){
-            for(j=0;j<ny+2;j++){
-                n = k*nx * ny + (i-1) * ny + j -1;
-                fp >> v;
-                if(synflag==1) fptrue >> vtrue;
-                if(i == 0||j == 0||k == nz||i == nx+1||j == ny+1)
-                    continue;
-                empirical_relation(&v,&vp,density0+n);
-            }
-        }
-    }
-    israd = 0;
+    for(i = 0;i < nx+2;i++){
+    for(j=0;j<ny+2;j++){
+        n = k*nx * ny + (i-1) * ny + j -1;
+        fp >> v;
+        if(i == 0||j == 0||k == nz||i == nx+1||j == ny+1)
+            continue;
+        empirical_relation(&v,&vp,density0+n);
+    }}}
+    israd = 0;*/
     fp.close();
 }
 
@@ -424,7 +421,7 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
 /*
     Given Random Observation System. Only Compute matrix of gravity in Radial direction.
 */
-void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<float> &smat)
+void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,csr_matrix<float> &smat)
 {
     double   ro, lonrado, colatrado;
     int     i, j;
@@ -442,22 +439,20 @@ void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<floa
     nz = mod3dsphgra.nz;
 
     // arrays to store all the corresponding columns
-    col = new int [(int)(np * nx * ny * nz * 0.1)]();
+    col = new int [(int)(0.1 * np * nx * ny * nz)]();
 
     for( i = 0; i < np; i++ ){
         lonrado   = ObsSphGra.lon[i];
         colatrado = ObsSphGra.lat[i];
-        gravmat_one_row(mod3dsphgra,ro,lonrado,colatrado,col,smat.val,&nar1);
-        for(j = nar;j < nar1;j++){
-            smat.rw[j] = i;
-        }
+        gravmat_one_row(mod3dsphgra,ro,lonrado,colatrado,col,smat.data,&nar1);
+        smat.indptr[i+1] = smat.indptr[i] + nar1 - nar;
         printf("computing %d-th point: lon=%f lat=%f\n",
               i+1,lonrado/degrad2,90-colatrado/degrad2);
         nar = nar1;
     }
 
     for(i = 0;i < nar;i++){
-        smat.col[i] = col[i];
+        smat.indices[i] = col[i];
     }
 
     delete[] col;
@@ -469,11 +464,11 @@ void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,coo_matrix<floa
     openmpi is used.
 */
 void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    coo_matrix<float> &smat)
+                    csr_matrix<float> &smat)
 {
     double   ro;
     int     i, j;
-    int     np,nar,nar1,m;
+    int     np,nar,m;
     int nx,ny,nz;
 
     np  = ObsSphGra.np;
@@ -489,7 +484,7 @@ void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
     data = new float[np * ncol]();
     nars = new int [np]();
 
-    omp_set_num_threads(nthread);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(ObsSphGra,mod3dsphgra)
     for(i=0;i<np;i++){
         double lonrado   = ObsSphGra.lon[i];
@@ -499,18 +494,13 @@ void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
         printf("computing %d-th point: lon=%f lat=%f\n",
               i+1,lonrado/degrad2,90-colatrado/degrad2);
     }
-    nar = 0,nar1 = 0;
-    for(i=0;i<np;i++){
-        nar1 += nars[i];
-    }
+    nar = 0; 
 
     for(i=0;i<np;i++){
+        smat.indptr[i+1] = smat.indptr[i] + nars[i];
         for(j=0;j<nars[i];j++){
-            smat.rw[nar] = i;
-            smat.col[nar] = col[i*ncol+j];
-            //iw[nar+1+nar1] = col[i][j];
-            smat.val[nar] = data[i*ncol+j];
-            //rw[nar] = data[i][j];
+            smat.indices[nar] = col[i*ncol+j];
+            smat.data[nar] = data[i*ncol+j];
             nar += 1;
         }
     }

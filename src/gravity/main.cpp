@@ -1,11 +1,10 @@
 #include"gravmat.hpp"
-#include"coo_matrix.hpp"
 #include<fstream>
 #include<string.h>
 
 int main(int argc,char *argv[]){
     // check input parameters
-    std::string paramfile,modfile,datafile;
+    std::string paramfile,datafile,modfile;
     int ierr;
     if(argc == 1 ){
         std::cout <<"NO INPUT FILES ARE given!, now use the default ones ..."<<std::endl;
@@ -22,7 +21,7 @@ int main(int argc,char *argv[]){
     }
     else if (argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
-        std::cout <<"./this paramfile datafile denmodel " << std::endl;
+        std::cout <<"./this paramfile datafile vs-model " << std::endl;
         exit(0);
     }
     else{
@@ -34,13 +33,14 @@ int main(int argc,char *argv[]){
     OBSSphGraRandom obs;
 
     // read density model and gravity data
+    //mod.read_model(paramfile,modfile);
     mod.read_model(paramfile,modfile);
     obs.read_obs_data(datafile);
 
     // init sparse matrix
     int n = mod.nx * mod.ny * mod.nz;
-    int nonzeros = (int)(n * obs.np * 0.1);
-    coo_matrix<float> smat(obs.np,n,nonzeros);
+    int nonzeros = (int)(0.1 * n * obs.np);
+    csr_matrix<float> smat(obs.np,n,nonzeros);
 
     //change coordinates
     obs.chancoor(1);
@@ -49,7 +49,7 @@ int main(int argc,char *argv[]){
     // compute gravity matrix and synthetic gravity data
     FILE *fp;
     std::cout << "begin to compute gravity matrix" << std::endl;
-    gravmat_parallel(mod,obs,smat);
+    gravmat_parallel(mod,obs,smat); 
 
     // save gravity matrix
     fp = fopen("gravmat.dat","w");
@@ -57,8 +57,14 @@ int main(int argc,char *argv[]){
         std::cout <<"cannot open file gravmat.dat";
         exit(0);
     }
-    for(int i=0;i<smat.nonzeros;i++){
-        ierr = fprintf(fp,"%d %d %g\n",smat.rw[i],smat.col[i],smat.val[i]);
+    for(int i=0;i<smat.rows();i++){
+        int start = smat.indptr[i];
+        int end = smat.indptr[i+1];
+        int nar = end - start;
+        ierr = fprintf(fp,"# %d %d\n",i,nar);
+        for(int j=start;j<end;j++){
+            ierr = fprintf(fp,"%d %g\n",smat.indices[j],smat.data[j]);
+        }
     }
     
     fclose(fp);

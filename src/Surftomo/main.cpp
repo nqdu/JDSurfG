@@ -48,14 +48,14 @@ int main(int argc, char* argv[]){
     std::ofstream outfile;
 
     // class for inversion;
-    SurfTomo tomo;
+    DSurfTomo tomo;
 
     // read all the parameters, initial model, and observed data
     tomo.readdata(paramfile,datafile,modfile,modtrue);
 
    // initialize some parameters
     VectorXf dsyn(tomo.num_data); // synthetics for every step
-    Tensor<float,3> vsf = tomo.mod.vs * 1.0f; // set inversion model to initial one
+    Tensor<float,3> vsf = tomo.mod.vs * 1.0f;  // set inversion model to initial one
 
    // checkerboard test if required
     if(tomo.param.ifsyn){

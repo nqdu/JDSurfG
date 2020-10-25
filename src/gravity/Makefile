@@ -5,7 +5,7 @@ include ../../include/Makefile
 
 cc = g++
 includes = -I../../include $(path_to_eigen) $(path_to_gsl_include)
-gsl_lib = -lgsl -lgslcblas $(path_to_gsl_lib)
+gsl_lib = $(path_to_gsl_lib)
 utils=../utils
 
 # c scripts
@@ -14,7 +14,7 @@ src = $(shell find *.cpp) $(utils)/spherical.cpp  $(utils)/gauleg.cpp
 cppobj = $(src:%.cpp=%.o) $(utils)/empirical.o
 
 $(out):  $(cppobj)
-	$(cc)  -o ../../bin/$(out) $(cppobj)  -lm -fopenmp $(gsl_lib)
+	$(cc)  -o ../../bin/$(out) $(cppobj)  -fopenmp $(gsl_lib)
 
 gravmat.o:gravmat.cpp
 	$(cc) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp

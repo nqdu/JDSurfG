@@ -347,6 +347,15 @@ void JointTomo:: checkerboard()
     }
 }
 
+VectorXi 
+JointTomo:: FrechetKernel(Tensor<float,3> &vs,VectorXf &dsyn,
+            std::string save_dir)
+{
+    VectorXi nonzeros = surf.FrechetKernel(mod,vs,dsyn,save_dir);
+
+    return nonzeros;
+}
+
 /**
  * Assemble gravity and surfdisp matrix to a global one, and add weights
  * -------------------------------------------------------------------
@@ -363,6 +372,42 @@ void JointTomo::
 assemble(std::string basedir,Tensor<float,3> &vsf,csr_matrix<float> &smat,
          float weight1,float weight2)
 {
+    omp_set_num_threads(nthreads);
+    #pragma parallel for shared(smat)
+    for(int p=0;p<nthreads;p++){
+        std::string filename = basedir + "/" +  std::to_string(p) + ".txt";
+
+        // open file
+        char line[100];
+        FILE *fp;
+        if((fp=fopen(filename.c_str(),"r"))==NULL){
+            std::cout << "cannot open file "<< filename << std::endl;
+            exit(0);
+        }
+
+        int rw_idx,nar;
+        char dummy;
+        while(fgets(line,sizeof(line),fp)!=NULL){
+            if(line[0] != '#') break;
+            sscanf(line,"%c%d%d",&dummy,&rw_idx,&nar);
+            int start = smat.indptr[rw_idx];
+            int end = smat.indptr[rw_idx + 1];
+
+            if(end - start != nar){
+                std::cout << "format error!\n";
+                exit(1);
+            }
+
+            for(int i=start;i<end;i++){
+                int ierr = fscanf(fp,"%d%f\n",smat.indices + i,smat.data + i);
+            }
+        }
+
+        //close and delete file
+        fclose(fp);
+        int ierr = system(("rm -r "+ filename).c_str() );
+    } 
+
     // get model and matrix dimensions
     int nx = mod.nx, ny = mod.ny, nz = mod.nz;
     int n = smat.cols();
@@ -415,7 +460,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
 
     // compute frechet kernel, and gravity anomaly
     std::string basedir = "kernel";
-    VectorXi nonzeros = surf.FrechetKernel(mod,vsf,dsyn,basedir);
+    VectorXi nonzeros = FrechetKernel(vsf,dsyn,basedir);
     modref.gravity(gmat,vsf,dg);
     float mean = dg.sum() / dg.size();
     dg.array() -= mean;
@@ -445,7 +490,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     sigma1 = sqrt(param.p /surf.num_data) / sigma1;
     sigma2 = sqrt((1-param.p)/obsg.np) / sigma2;
 
-    // initialize global sparse matrix  
+    // initialize global sparse matrix
     int nar = nonzeros.sum(); 
     csr_matrix<float> smat(m+n,n,nar + gmat.nonzeros + n * 7);
     smat.indptr[0] = 0;
@@ -456,10 +501,8 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
 
     // assembling derivative matrix
     std::cout << "Assembling derivative Matrix ..." << std::endl;
-    surf.read_Frechet_Kernel(basedir,smat);
     assemble(basedir,vsf,smat,sigma1,sigma2);
 
-    /*
     FILE *fp;
     fp = fopen("testmat.dat","w");
     for(int i=0;i<num_data;i++){
@@ -469,7 +512,6 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     }
     fclose(fp);
     exit(0);
-    */
 
     // add weights
     for(int i=0;i<surf.num_data;i++){

@@ -1,9 +1,9 @@
+#define EIGEN_DONT_PARALLELIZE
 #include"SurfaceWave.hpp"
 #include"utils.hpp"
 #include"surfdisp.hpp"
 #include"openmp.hpp"
 #include<fstream>
-#include<omp.h>
 using Eigen::Tensor;
 using Eigen::MatrixXd;
 using Eigen:: VectorXf;
@@ -119,7 +119,8 @@ void __dispMap__(double *vmap,float *vs,float *vp,float *rho,float *dep,int nz,
  * Parameters:
  *      mod         : background model
  *      vs          : vs velocity (nx,ny,nz)
- *      pv          : dispersion map(nx*ny,nt), fundamental mode Rc,Rg,Lc,Lg, and first mode ...
+ *      pv          : dispersion map(nx*ny,nt), 
+ *                    fundamental mode Rc,Rg,Lc,Lg, and first mode ...
 */
 void SurfTime ::DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::MatrixXd &pv)
 {
@@ -137,7 +138,7 @@ void SurfTime ::DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::Matrix
     }}}
 
     // compute dispersion map
-    omp_set_num_threads(nthread);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs0,pv0,mod)
     for(int n=0;n<nx*ny;n++){
         int i = n % nx;
@@ -183,7 +184,7 @@ void SurfTime:: SurfWaveKernel(MOD3d &mod,Tensor<float,3> &vs,
     // compute frechet kernel and dispersion map
     MatrixXd pv0(nt,nx*ny);
     Tensor<double,3> kernel0(nt,nz,nx*ny);
-    omp_set_num_threads(nthread);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs0,pv0,mod,kernel0)
     for(int n=0;n<nx*ny;n++){
         int i = n % nx;
@@ -243,7 +244,7 @@ void SurfTime :: TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorX
 
     // get traveltime for every source-receiver pair
     int np = Pairs.size();;
-    omp_set_num_threads(nthread);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs,pv,mod,data)
     for(int n=0;n<np;n++){
         StationPair &p = Pairs[n];
@@ -260,8 +261,9 @@ void SurfTime :: TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorX
     }
 }
 
-int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
-                                        std::string save_dir)
+Eigen::VectorXi 
+SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
+                            std::string save_dir)
 {
   // get vs-dimension
     int nx = mod.nx,ny = mod.ny,nz= mod.nz;
@@ -269,29 +271,26 @@ int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
     Tensor<double,3> kernel(nx*ny,nz,kmax);
 
     // compute dispersion map and frechet kernel
-    std::cout << "computing Surface Wave Frechet Kernel ..." << std::endl;
+    std::cout << "computing Surface Wave 1-D Frechet Kernel ..." << std::endl;
     SurfWaveKernel(mod,vs,pv,kernel);
 
     // --------------------------------------------------
     // get traveltime for every source-receiver pair
     // ---------------------------------------------------
-    std::cout << "computing traveltimes and Frechet Kernel ..." <<std::endl;
+    std::cout << "computing traveltimes and 2-D Frechet Kernel ..." <<std::endl;
     int np = Pairs.size(); // no. of pairs
     
-    // compute no. of non-zero elements in frechet matrix for each thread
-    std::vector<int> nonzeros(nthread);
+    // compute no. of non-zero elements in frechet matrix for each data
+    Eigen::VectorXi nonzeros(num_data);
+
+    //std::vector<int> nonzeros(nthreads);
     std::string cmd = "mkdir -p " + save_dir;
     int flag= system(cmd.c_str()); // mkdir
     
     // parallelization
-    omp_set_num_threads(nthread);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs,pv,mod,data,kernel)
-    for(int nn=0;nn<nthread;nn++){
-        // compute index for this part
-        int start = np / nthread * nn;
-        int end = np / nthread * (nn + 1);
-        if(nn == nthread - 1) end = np;
-
+    for(int nn=0;nn<nthreads;nn++){
         // open a file to save frechet kernel
         std::string filename = save_dir + "/" + std::to_string(nn) +".txt";
         FILE *fp;
@@ -301,9 +300,7 @@ int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
         }
 
         // loop around all station pairs
-        int counter = Pairs[start].counter; // data counter
-        //std::cout << counter << std::endl;
-        for(int pp = start;pp < end;pp += 1){
+        for(int pp=nn;pp<np;pp+=nthreads){
             StationPair &p = Pairs[pp];
             int nr = p.nr;
             int idx = get_period_index(p.period_idx,p.wavetype);
@@ -317,13 +314,15 @@ int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
                         &p.rcz[0],nr,ttime,&kernel(0,0,idx),frechet.data());
             
             // loop around all receivers
+            int counter = p.counter;
             for(int i=0;i<nr;i++){
-                int non = (frechet.col(i).array().abs()>0).cast<int>().sum();
-                nonzeros[nn] += non;
+                int nar = (frechet.col(i).array().abs()>0).cast<int>().sum();
+                nonzeros(counter) = nar;
+                fprintf(fp,"# %d %d\n",counter,nar);
                 for(int j=0;j<n;j++){
                     float tmp = frechet(j,i);
                     if(std::abs(tmp)> 0.0) {
-                        fprintf(fp,"%d %d %g\n",counter,j,tmp);
+                        fprintf(fp,"%d %g\n",j,tmp);
                     }
                 }
                 data(p.counter + i) = ttime[i];
@@ -332,9 +331,45 @@ int SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
         }
         fclose(fp);
     }
+    return nonzeros;
+}
 
-    int nar = 0;
-    for(int i=0;i<nthread;i++) nar += nonzeros[i];
+void SurfTime::
+read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
+{
+    omp_set_num_threads(nthreads);
+    #pragma parallel for shared(smat)
+    for(int p=0;p<nthreads;p++){
+        std::string filename = basedir + "/" +  std::to_string(p) + ".txt";
 
-    return nar;
+        // open file
+        char line[100];
+        FILE *fp;
+        if((fp=fopen(filename.c_str(),"r"))==NULL){
+            std::cout << "cannot open file "<< filename << std::endl;
+            exit(0);
+        }
+
+        int rw_idx,nar;
+        char dummy;
+        while(fgets(line,sizeof(line),fp)!=NULL){
+            if(line[0] != '#') break;
+            sscanf(line,"%c%d%d",&dummy,&rw_idx,&nar);
+            int start = smat.indptr[rw_idx];
+            int end = smat.indptr[rw_idx + 1];
+
+            if(end - start != nar){
+                std::cout << "format error!\n";
+                exit(1);
+            }
+
+            for(int i=start;i<end;i++){
+                int ierr =fscanf(fp,"%d%f\n",smat.indices + i,smat.data + i);
+            }
+        }
+
+        //close and delete file
+        fclose(fp);
+        int ierr = system(("rm -r "+ filename).c_str() );
+    } 
 }

@@ -1,7 +1,9 @@
+#define EIGEN_DONT_PARALLELIZE
 #include"tomography.hpp"
 #include"utils.hpp"
 #include"csr_matrix.hpp"
 #include<fstream>
+#include"openmp.hpp"
 using Eigen::Tensor;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
@@ -26,7 +28,7 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
     return nr;   
 }
 
-int DSurfTomo:: readdata(std::string paramfile,std::string datafile,
+int SurfTomo:: readdata(std::string paramfile,std::string datafile,
                         std::string modfile,std::string modtrue )
 {
  // read paramfile
@@ -255,12 +257,20 @@ int DSurfTomo:: readdata(std::string paramfile,std::string datafile,
     return 1;
 }
 
-void DSurfTomo:: forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data)
+void SurfTomo:: forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data)
 {
     surf.TravelTime(mod,vs,data);
 }
 
-void DSurfTomo :: checkerboard()
+VectorXi 
+SurfTomo::FrechetKernel(Tensor<float,3> &vs,VectorXf &data,std::string save_dir)
+{
+    VectorXi nonzeros = surf.FrechetKernel(mod,vs,data,save_dir);
+
+    return nonzeros;
+}
+
+void SurfTomo :: checkerboard()
 {
     VectorXf dsyn(surf.num_data);
     forward(vstrue,dsyn);
@@ -271,8 +281,46 @@ void DSurfTomo :: checkerboard()
     surf.obst = dsyn;
 }
 
+void SurfTomo::assemble(std::string basedir,csr_matrix<float> &smat)
+{
+    omp_set_num_threads(nthreads);
+    #pragma parallel for shared(smat)
+    for(int p=0;p<nthreads;p++){
+        std::string filename = basedir + "/" +  std::to_string(p) + ".txt";
 
-void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
+        // open file
+        char line[100];
+        FILE *fp;
+        if((fp=fopen(filename.c_str(),"r"))==NULL){
+            std::cout << "cannot open file "<< filename << std::endl;
+            exit(0);
+        }
+
+        int rw_idx,nar;
+        char dummy;
+        while(fgets(line,sizeof(line),fp)!=NULL){
+            if(line[0] != '#') break;
+            sscanf(line,"%c%d%d",&dummy,&rw_idx,&nar);
+            int start = smat.indptr[rw_idx];
+            int end = smat.indptr[rw_idx + 1];
+
+            if(end - start != nar){
+                std::cout << "format error!\n";
+                exit(1);
+            }
+
+            for(int i=start;i<end;i++){
+                int ierr =fscanf(fp,"%d%f\n",smat.indices + i,smat.data + i);
+            }
+        }
+
+        //close and delete file
+        fclose(fp);
+        int ierr = system(("rm -r "+ filename).c_str() );
+    } 
+}
+
+void SurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
 {
     int m = surf.num_data;
     int nx = mod.nx, ny = mod.ny;
@@ -286,7 +334,8 @@ void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
 
     // compute frechet kernel
     std::string basedir = "kernel";
-    VectorXi nonzeros = surf.FrechetKernel(mod,vsf,dsyn,basedir);
+    VectorXi nonzeros = FrechetKernel(vsf,dsyn,basedir);
+    //std::cout << nar << std::endl;
     res.segment(0,m) = surf.obst - dsyn;
 
     // initialize matrix and compute indptr
@@ -300,7 +349,7 @@ void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
 
     // assembling derivative matrix
     std::cout << "Assembling derivative Matrix ..." << std::endl;
-    surf.read_Frechet_Kernel(basedir,smat);
+    assemble(basedir,smat);
     
     // add regularization terms
     mod.add_regularization(smat,param.smooth);

@@ -85,7 +85,7 @@ c        real*4 thkm(NLAY),vpm(NLAY),vsm(NLAY),rhom(NLAY)
         real(c_double),INTENT(INOUT) :: cg(kmax)
         real(c_double) :: twopi,one,onea
         real(c_double) :: cc,c1,clow,cm,dc,t1
-        !double precision t(NP),c(NP),cb(NP),cg(NP)
+c       double precision t(NP),c(NP),cb(NP),cg(NP)
         real(c_double) ::c(kmax),cb(kmax)
 c       real*4 d(NL),a(NL),b(NL),rho(NL),rtp(NL),dtp(NL),btp(NL)
         real(c_float) :: d(nlayer),a(nlayer),b(nlayer),rho(nlayer)

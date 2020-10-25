@@ -196,5 +196,6 @@ int main(int argc, char* argv[]){
     outfile.close();
 
     std::cout << "Program finishes Successfully!" << std::endl;
+
     return 0;
 }
