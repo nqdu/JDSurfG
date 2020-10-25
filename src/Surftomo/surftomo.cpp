@@ -12,7 +12,7 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
     while(!feof(fp)){
         if(fgets(line,300*sizeof(char),fp)==NULL)
             break;
-        if(line[0] == '#') break;
+        if(line[0] == '#') break; 
         float stalat,stalon,velvalue,dist1;
         sscanf(line,"%f%f%f",&stalat,&stalon,&velvalue);
         stalat=(90.0-stalat)*pi/180.0;

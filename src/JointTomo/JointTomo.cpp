@@ -9,7 +9,7 @@ using Eigen::VectorXi;
 
 int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
                 std::vector<float> &rcz,std::vector<float> &v)
-{
+{ 
     while(!feof(fp)){
         if(fgets(line,300*sizeof(char),fp)==NULL)
             break;

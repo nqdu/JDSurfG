@@ -368,7 +368,7 @@ read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
             }
         }
 
-        //close and delete file
+        //close and delete file 
         fclose(fp);
         int ierr = system(("rm -r "+ filename).c_str() );
     } 
