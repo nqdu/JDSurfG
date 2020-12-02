@@ -154,7 +154,9 @@
      are depth of every grid nodes in depth direction. And this line don't exist in \verb!MOD.true!.\\
 
     The subsequent lines of \verb!MOD! are shear wave velocities. If we store the velocity with the 
-    format V(nz,nlon,nlat), then it should be print to MOD as following:
+    format V(nz,nlon,nlat)(where V(0,0,0) is the shear-wave velocity of the 
+    top left point at 0km, and V(nz-1,nlon-1,nlat-1) is the velocity of 
+    lower right point at dep(nz-1) km), then it should be print to MOD as following:
     \begin{lstlisting}[language=c++]
 //c++
 for(int i=0;i<nz;i++){
