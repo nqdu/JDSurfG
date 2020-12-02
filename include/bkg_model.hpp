@@ -29,6 +29,6 @@ class MOD3d{
 
     void add_regularization(csr_matrix<float> &smat,float smooth);
 
-    void empirical_relation(float plat,float plon,float pdep,float beta,
+    void empirical(float plat,float plon,float pdep,float beta,
                             float &alpha,float &rho);
 };

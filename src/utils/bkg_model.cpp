@@ -111,8 +111,8 @@ void MOD3d::add_regularization(csr_matrix<float> &smat,float weight)
 }
 
 void MOD3d::
-empirical_relation(float plat,float plon,float pdep,float beta,
+empirical(float plat,float plon,float pdep,float beta,
                             float &alpha,float &rho)
 {
-    
+
 }
