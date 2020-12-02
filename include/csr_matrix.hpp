@@ -27,9 +27,9 @@ class csr_matrix{
         MATRIX_ROW = rows;
         MATRIX_COL = cols;
         nonzeros = nar;
-        indices = new int [nar];
-        data = new T [nar];
-        indptr = new int[rows + 1];
+        indices = new int [nar]();
+        data = new T [nar]();
+        indptr = new int[rows + 1]();
         ALLOCATE = true;
     }
 
