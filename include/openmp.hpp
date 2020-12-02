@@ -1,2 +1,2 @@
-#define nthreads 12
+#define nthreads 4
 #include<omp.h>
