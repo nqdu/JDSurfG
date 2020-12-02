@@ -23,8 +23,8 @@ coo_matrix(int rows,int cols,int nar)
     m = rows;
     n = cols;
     nonzeros = nar;
-    rw = new int [nonzeros]; col = new int [nonzeros];
-    val = new T [nonzeros];
+    rw = new int [nonzeros](); col = new int [nonzeros]();
+    val = new T [nonzeros]();
     flag = true;
     scaling = true;
 }
