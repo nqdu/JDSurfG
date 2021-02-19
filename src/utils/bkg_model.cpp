@@ -62,6 +62,7 @@ void MOD3d::add_regularization(csr_matrix<float> &smat,float weight)
     for(int j=0;j<ny-2;j++){
     for(int i=0;i<nx-2;i++){
         if( i==0 || i==nx-3 || j==0 || j==ny-3 || k==0 || k==nz-2){
+            
             // and more restrictions to boundary points
             if(nar + 1 > smat.nonzeros){
                 std::cout << "please increase sparse ratio!" << std::endl;
@@ -73,6 +74,8 @@ void MOD3d::add_regularization(csr_matrix<float> &smat,float weight)
             smat.indptr[rwc + 1] = smat.indptr[rwc] + 1;
             nar += 1;
             count += 1;
+            
+           continue;
         }
         else{
             if(nar  + 7 > smat.nonzeros){
@@ -108,11 +111,4 @@ void MOD3d::add_regularization(csr_matrix<float> &smat,float weight)
         }
     }}}
     smat.nonzeros = nar;
-}
-
-void MOD3d::
-empirical(float plat,float plon,float pdep,float beta,
-                            float &alpha,float &rho)
-{
-
 }

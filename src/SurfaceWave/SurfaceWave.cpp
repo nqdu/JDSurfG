@@ -373,3 +373,34 @@ read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
         int ierr = system(("rm -r "+ filename).c_str() );
     } 
 }
+
+void SurfTime:: 
+write_disper(Eigen::VectorXf &dsyn,std::string filename){
+    std::ofstream outfile;
+    outfile.open(filename);
+
+    // output
+    int c = 0; // counter
+    double rad2deg = 180. / pi;
+    for(int n=0;n<Pairs.size();n++){
+        StationPair &p = Pairs[n];
+        float elat = (pi * 0.5 - p.srcx) * rad2deg, elon = p.srcz * rad2deg;
+        float T;
+        if(p.wavetype == "Rc")
+            T = tRc(p.period_idx);
+        else if(p.wavetype == "Rg")
+            T = tRg(p.period_idx);
+        else if(p.wavetype == "Lc")
+            T = tLc(p.period_idx);
+        else 
+            T = tLg(p.period_idx);
+        for(int i=0;i<p.nr;i++){
+            outfile << sta_dist[c] << " " << obst(c) << " " << dsyn(c) << " ";
+            outfile << elat << " " << elon << " ";
+            float  slat = (pi*0.5 - p.rcx[i]) * rad2deg, slon = p.rcz[i] * rad2deg;
+            outfile << slat << " " << slon << " " << T << " " << p.wavetype << "\n";
+            c += 1;
+        }
+    }
+    outfile.close();
+}

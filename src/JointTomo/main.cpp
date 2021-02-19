@@ -4,7 +4,7 @@
 #include"tomography.hpp"
 using namespace Eigen;
 
-void print_mean_and_rms(VectorXf a,std::string info)
+void print_mean_and_rms(VectorXf a,std::string info,float weight1=0.0,float weight2=0.0)
 {
     float mean = a.mean();
     float rms = a.array().pow(2.).mean() - mean * mean;
@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
         gravdata = argv[3];
         gravmat = argv[4];
         modfile = argv[5];
-        modtrue = modfile +".true";
+        modtrue = "None";
         refmod = "None";
         if(argc == 7) refmod = argv[6];
         if(argc == 8){
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]){
     Tensor<float,3> vsf = tomo.mod.vs * 1.0f; // set inversion model to initial 
 
    // checkerboard test if required
-    if(tomo.param.ifsyn){
+    if(tomo.param.ifsyn==1){
         std::cout<<"Checkerboard Resolution Test Begin ..." << std::endl;
         tomo.checkerboard();
     }
@@ -128,17 +128,12 @@ int main(int argc, char* argv[]){
 
         // save current synthetics
         std::string resfile = "results/res_surf"+std ::to_string(iter)+".dat";
-        outfile.open(resfile);
-        for(int i=0;i<nt;i++){
-            outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
-                   << dsyn(i) <<std::endl;
-        }
-        outfile.close();
+        tomo.surf.write_disper(dsyn,resfile);
 
         resfile = "results/res_grav"+std ::to_string(iter)+".dat";
         outfile.open(resfile);
         for(int i=0;i<ng;i++){
-            outfile << Gr(i) << " "<< dg(i) <<std::endl;
+            outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " <<Gr(i) << " "<< dg(i) <<std::endl;
         }
         outfile.close();
 
@@ -181,20 +176,16 @@ int main(int argc, char* argv[]){
     // save synthetics for last iteration
     int maxiter = tomo.param.maxiter;
     resfile = "results/res_surf"+std ::to_string(maxiter)+".dat";
-    outfile.open(resfile);
-    for(int i=0;i<nt;i++){
-        outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
-                << dsyn(i) <<std::endl;
-    }
-    outfile.close();
+    tomo.surf.write_disper(dsyn,resfile);
 
     resfile = "results/res_grav"+std ::to_string(maxiter)+".dat";
     outfile.open(resfile);
     for(int i=0;i<ng;i++){
-        outfile << Gr(i) << " "<< dg(i) <<std::endl;
+        outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " <<    Gr(i) << " "<< dg(i) <<std::endl;
     }
     outfile.close();
 
+    int ierr = system("rm -r kernelJ");
     std::cout << "Program finishes Successfully!" << std::endl;
 
     return 0;

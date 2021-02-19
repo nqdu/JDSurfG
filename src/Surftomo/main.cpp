@@ -30,7 +30,7 @@ int main(int argc, char* argv[]){
         paramfile = argv[1];
         modfile = argv[3];
         datafile = argv[2];
-        modtrue = modfile +".true";
+        modtrue = "None";
         if(argc == 5) modtrue = argv[4];
     }
     else if(argc == 2 && !strcmp(argv[1],"-h")){
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]){
     Tensor<float,3> vsf = tomo.mod.vs * 1.0f;  // set inversion model to initial one
 
    // checkerboard test if required
-    if(tomo.param.ifsyn){
+    if(tomo.param.ifsyn == 1){
         std::cout<<" Checkerboard Resolution Test Begin ..." << std::endl;
         tomo.checkerboard();
     }
@@ -92,12 +92,7 @@ int main(int argc, char* argv[]){
 
         // save current synthetics
         std::string resfile = "results/res"+std ::to_string(iter)+".dat";
-        outfile.open(resfile);
-        for(int i=0;i<tomo.num_data;i++){
-            outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
-                   << dsyn(i) <<std::endl;
-        }
-        outfile.close();
+        tomo.surf.write_disper(dsyn,resfile);
 
         // save current model
         resfile="results/mod_iter"+std ::to_string(iter+1)+".dat";
@@ -124,14 +119,10 @@ int main(int argc, char* argv[]){
     // save synthetics for last iteration
     int maxiter = tomo.param.maxiter;
     resfile = "results/res"+std ::to_string(maxiter)+".dat";
-    outfile.open(resfile);
-    for(int i=0;i<tomo.num_data;i++){
-        outfile << tomo.surf.sta_dist(i) << " " << tomo.surf.obst(i) << " "\
-                << dsyn(i) <<std::endl;
-    }
-    outfile.close();
+    tomo.surf.write_disper(dsyn,resfile);
 
     std::cout << std::endl;
+    int ierr = system("rm -r kernel");
     std::cout << "Program finishes Successfully!" << std::endl;
     return 0;
 

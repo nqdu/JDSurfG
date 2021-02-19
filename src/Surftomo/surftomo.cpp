@@ -241,7 +241,7 @@ int DSurfTomo:: readdata(std::string paramfile,std::string datafile,
     infile.close();
 
     // read ture model if required
-    if(param.ifsyn){
+    if(param.ifsyn == 1){
         infile.open(modtrue);
         for(int k=0;k<mod.nz;k++){
         for(int j=0;j<mod.ny;j++){
@@ -264,11 +264,13 @@ void DSurfTomo :: checkerboard()
 {
     VectorXf dsyn(surf.num_data);
     forward(vstrue,dsyn);
+
     // add noise
     for(int i=0;i<surf.num_data;i++){
-        dsyn(i) *= (1.0 + param.noiselevel * gaussian());
+        //dsyn(i) *= (1.0 + param.noiselevel * gaussian());
+        dsyn(i) += param.noiselevel * gaussian();
     }
-    surf.obst = dsyn;
+    surf.obst = dsyn*1.0;
 }
 
 

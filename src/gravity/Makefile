@@ -4,7 +4,7 @@ out = mkmat
 include ../../include/Makefile
 
 cc = g++
-includes = -I../../include $(path_to_eigen) $(path_to_gsl_include)
+includes = -I../../include
 gsl_lib = $(path_to_gsl_lib)
 utils=../utils
 
@@ -24,4 +24,4 @@ gravmat.o:gravmat.cpp
 %.o: %.f90
 	gfortran -g -c $< -o $@ $(opt)
 clean:
-	rm  *.o *.mod
+	rm  *.o 

@@ -72,6 +72,7 @@ module lsmrblasInterface
 !nqdu
 module lsmr_csr_matrix
 contains
+
 subroutine aprod(mode, m, n, x, y,val,indices,indptr)
    use lsmrDataModule, only : dp
    use,intrinsic :: iso_c_binding
@@ -96,7 +97,63 @@ subroutine aprod(mode, m, n, x, y,val,indices,indptr)
          enddo
       enddo
    endif
-end
+end subroutine aprod
+
+subroutine aprod_parallel(mode, m, n, x, y,val,indices,indptr)
+   !!compute y = y + A *x or x = x + A.T * y 
+   !! parallel version
+   use,intrinsic :: iso_c_binding
+   use omp_lib
+   implicit none
+   integer,PARAMETER         :: dp = c_float
+   integer(c_int),intent(in) :: mode,m,n
+   integer(c_int),INTENT(IN) :: indices(*),indptr(*)
+   real(dp),INTENT(IN)       :: val(*)
+   real(dp),INTENT(INOUT)    :: x(n),y(m)
+
+   ! local
+   real(dp),ALLOCATABLE      :: xtmp(:,:),ytmp(:,:)
+   integer i,j;
+   integer rank
+
+   ! allocate space
+   if(mode == 1) then 
+      allocate(ytmp(m,4))
+   else 
+      allocate(xtmp(n,4))
+   endif
+
+   call omp_set_num_threads(4)
+   !$omp parallel do shared(mode,m,n,val,indices,indptr,xtmp) private(i,j,rank)
+   do rank=1,4
+      if(mode == 1) then 
+         ytmp(:,rank) = 0.0 
+         do i=rank,m,4
+            do j=indptr(i),indptr(i+1)-1
+               ytmp(i,rank) = ytmp(i,rank) + val(j) * x(indices(j))
+            enddo
+         enddo
+      else 
+         xtmp(:,rank) = 0.0
+         do i=rank,m,4
+            do j=indptr(i),indptr(i+1)-1
+               xtmp(indices(j),rank) = xtmp(indices(j),rank) + val(j) * y(i)
+            enddo
+         enddo
+      endif
+   enddo
+   !$omp end parallel do
+
+   if(mode == 1) then 
+      y = y + sum(ytmp,dim=2)
+      DEALLOCATE(ytmp)
+   else 
+      x = x + sum(xtmp,dim=2)
+      DEALLOCATE(xtmp)
+   endif
+   
+end subroutine aprod_parallel
+
 end module lsmr_csr_matrix
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -509,7 +566,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
 !subroutine LSMR  ( m, n, leniw, lenrw,iw,rw, b, damp,               &
 !                     atol, btol, conlim, itnlim, localSize, nout,      &
 !                     x, istop, itn, normA, condA, normr, normAr, normx )
-   use lsmr_csr_matrix,only      : aprod
+   use lsmr_csr_matrix,only      : aprod,aprod_parallel
    integer(c_int),value, intent(in) :: m,n,verbose
    integer(c_int), INTENT(IN) :: indices(*),indptr(*)
    real(dp),INTENT(IN) :: val(*)

@@ -268,7 +268,7 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
     infile.close();
 
     // step5 : read ture model if required
-    if(param.ifsyn){
+    if(param.ifsyn == 1){
         infile.open(modtrue);
 
         for(int k=0;k<mod.nz;k++){
@@ -294,8 +294,7 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
         infile.close();
     }
     else{
-        std::cout<<"no reference model is given, so the average of\
-                    initial model is used" << std::endl;
+        std::cout<<"no reference model is given, so the average of initial model is used" << std::endl;
         for(int k=0;k<mod.nz;k++){
             float mean = 0.0;
             for(int j=0;j<mod.ny-2;j++){
@@ -339,11 +338,13 @@ void JointTomo:: checkerboard()
 
     // add noise
     for(int i=0;i<surf.num_data;i++){
-        surf.obst(i) = dsyn(i) * (1.0 +  param.noiselevel * gaussian());
+        //surf.obst(i) = dsyn(i) * (1.0 +  param.noiselevel * gaussian());
+        surf.obst(i) = dsyn(i) + param.noiselevel * gaussian();
     }
 
     for(int i=0;i<obsg.np;i++){
-        obsg.Gr[i] = dg(i) * (1.0 + param.noiselevel1 * gaussian());
+        //obsg.Gr[i] = dg(i) * (1.0 + param.noiselevel1 * gaussian());
+        obsg.Gr[i] = dg(i) + param.noiselevel1 * gaussian();
     }
 }
 
@@ -414,7 +415,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     VectorXf res(m + n);
 
     // compute frechet kernel, and gravity anomaly
-    std::string basedir = "kernel";
+    std::string basedir = "kernelJ";
     VectorXi nonzeros = surf.FrechetKernel(mod,vsf,dsyn,basedir);
     modref.gravity(gmat,vsf,dg);
     float mean = dg.sum() / dg.size();
@@ -429,19 +430,16 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     // compute weights according to Julia(2000)
     float sigma1,sigma2;
     if(param.ifsyn == 1){
-        sigma1 = param.noiselevel;
-        sigma2= param.noiselevel1;
+        //sigma1 = mean * (1. + param.noiselevel) / sqrt(surf.num_data);
+        //sigma2= meang * (1. + param.noiselevel1) / sqrt(surf.num_data);
+        sigma1 = param.noiselevel / sqrt(surf.num_data);
+        sigma2 = param.noiselevel1 / sqrt(surf.num_data);
     }
-    else if(param.ifsyn ==2){
-        float sigma1 = dnrm2(res.data(),m);
-        float sigma2 = dnrm2(res.data() + m,obsg.np);
-        sigma1 /= sigma2;
-        sigma2 = 1.0;
+    else {
+        sigma1 = param.weight1 / sqrt(surf.num_data);
+        sigma2 = param.weight2 / sqrt(surf.num_data);
     }
-    else{
-        sigma1 = param.weight1;
-        sigma2 = param.weight2;
-    }
+    
     sigma1 = sqrt(param.p /surf.num_data) / sigma1;
     sigma2 = sqrt((1-param.p)/obsg.np) / sigma2;
 
@@ -458,18 +456,6 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     std::cout << "Assembling derivative Matrix ..." << std::endl;
     surf.read_Frechet_Kernel(basedir,smat);
     assemble(basedir,vsf,smat,sigma1,sigma2);
-
-    /*
-    FILE *fp;
-    fp = fopen("testmat.dat","w");
-    for(int i=0;i<num_data;i++){
-        for(int j=smat.indptr[i];j<smat.indptr[i+1];j++){
-            fprintf(fp,"%d %d %f\n",i,smat.indices[j],smat.data[j]);
-        }
-    }
-    fclose(fp);
-    exit(0);
-    */
 
     // add weights
     for(int i=0;i<surf.num_data;i++){
