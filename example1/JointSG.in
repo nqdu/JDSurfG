@@ -12,6 +12,6 @@
 0                              c: kmaxLc (followed by periods)
 0                              c: kmaxLg (followed by periods)
 1                                c: synthetic flag(0:real data,1:synthetic)
-0.02 0.02                            c: noiselevel
+5.0 8.0                            c: noiselevel
 0.5				c : weight parameter for 2 data, 0-1
-0.05 1
+0.5 0.9

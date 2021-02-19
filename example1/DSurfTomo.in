@@ -12,4 +12,4 @@
 0                              c: kmaxLc (followed by periods)
 0                              c: kmaxLg (followed by periods)
 1                                c: synthetic flag(0:real data,1:synthetic)
-0.02                             c: noi
+1.5                             c: noi
