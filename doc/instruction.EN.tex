@@ -36,7 +36,7 @@
    shear wave velocity in crust and upper mantle. This package, containing three modules, are 
    used to compute gravity matrix in spherical coordinates, to conduct direct surface wave 
    tomography, and to perform tomographic joint inversion of dispersion and gravity data 
-   respectively. Obviously, this kind of joint inversion is based on one-step surface wave 
+   respectively. This kind of joint inversion is based on one-step surface wave 
    inversion to compute 3-D (pseudo) sensitivity kernel of surface waves, and the adaptive 
    Gauss-Legendre integration method is utilized to handle the gravity part. Based on 
    empirical relations between seismic velocity and density of rocks, this package would be 
@@ -72,7 +72,13 @@
    \verb!~/.bashrc! when you install these two libraies. For example:
    \begin{lstlisting}[language=c]
     path_to_eigen= -I/path-to-eigen
-\end{lstlisting}
+    \end{lstlisting}
+    For GSL library, a convinient way is to use \verb!gsl-config! in the \verb!bin!
+    directory in the GSL Installation path:
+    \begin{lstlisting}[language=c]
+        path_to_gsl_lib =$(shell gsl-config --libs)
+        path_to_gsl_include = $(shell gsl-config --cflags)
+    \end{lstlisting}
 
     Then compile this package by:
     \begin{lstlisting}[language=bash]
@@ -81,7 +87,7 @@
     \end{lstlisting}
     Finally you will find three excecutable files in the directory \verb!bin/!
     \begin{lstlisting}[language=bash]
-        mkmat DSurfTomo JointSG  
+        mkmat DSurfTomo JointSG syngrav  
      \end{lstlisting}
     
      \section{Direct Surface Wave Tomography Module}
@@ -97,9 +103,9 @@
          \item Input model is homogeneous in latitudinal and longitudinal direction, but 
                 the grid size could vary in depth direction.
         \item The input model should be slightly larger than the inversion one in order to 
-              perform B-spline smoothing for forward computation. To be specific,
+              perform B-Spline smoothing for forward computation. To be specific,
               if we need to invert model in region $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$, 
-              we should edit your input model in region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1+dz)$.
+              we should edit your input model at least in region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1+dz)$.
          \item Stations should be far away from invert model boundaries, or some warning will be given 
               when you running this package. This is to avoid that surface wave train travels 
                 along the boundaries.
@@ -133,7 +139,7 @@
         \item[line 2] lat and lon in upper left point (Note this is the upper left point of input 
                     model instead of the inversion one!)
         \item[line 3] grid interval in lat and lon direction 
-        \item[line 4] 2-th order Tikhonov regularization parameter and damp.
+        \item[line 4] 2-th order Tikhonov regularization parameter and damping factor(0 or a small number for damping).
         \item[line 5] change grid-based model to layer-based model, insert sublayer layers between 
                       adjacent grids. Usually 3 is enough. 
         \item[line 6] minimum and maximum velocity permitted in inversion.
@@ -144,7 +150,7 @@
         \item[line ?] conduct checkerboard test? if so, set it to 1.
         \item[line ?]  noiselevel, the relative amplitude of noise。
         \[   
-            d^i = d_{syn}^i + (d_{syn}^i * noiselevel * N(0,1))
+            d^i = d_{syn}^i +  noiselevel * N(0,1)
          \]
     \end{enumerate}
 
@@ -154,8 +160,8 @@
      are depth of every grid nodes in depth direction. And this line don't exist in \verb!MOD.true!.\\
 
     The subsequent lines of \verb!MOD! are shear wave velocities. If we store the velocity with the 
-    format V(nz,nlon,nlat)(where V(0,0,0) is the shear-wave velocity of the 
-    top left point at 0km, and V(nz-1,nlon-1,nlat-1) is the velocity of 
+    format V(nz,nlon,nlat)(Row-major,where V(0,0,0) is the shear-wave velocity of the 
+    top left point at 0 km, and V(nz-1,nlon-1,nlat-1) is the velocity of 
     lower right point at dep(nz-1) km), then it should be print to MOD as following:
     \begin{lstlisting}[language=c++]
 //c++
@@ -202,7 +208,7 @@ for(int j=0;j<nlon;j++){
     signals from at this period, this wave type and this velocity type. And the format of each line 
     is:
     \begin{center}
-        latitude longitude velocity.
+        latitude longitude obs-velocity.
     \end{center} 
     
 
@@ -215,22 +221,33 @@ for(int j=0;j<nlon;j++){
     Then you could type in all required files according to the order on the screen.
 
     \subsection{Output Files}\label{surface wave output files}
-    This module will output 2 folders: \verb!kernel/! and \verb!results/!. \\
-
-    In \verb!kernel/!, there are 3-D pseudo sensitivity kenrels, and \verb!results/! contains 
+    This module will output 2 folders: \verb!kernel/! and \verb!results/!. In \verb!kernel/!, there are 3-D pseudo sensitivity kenrels, and \verb!results/! contains 
     all the models after every iteration. Here are information about the format of these files:
 
     \begin{itemize}
     \item \verb!kernel/!: 3-D pseudo sensitivity kernel. The number of txt files is 
-    equal to no. of threads used in your program (see \ref{number of threads}),and start from 0.
-    the format of every txt file is : data-index,model-index(only one needs to be inverted) and 
-    the value of the kernel.
+    equal to no. of threads used in your program (see \ref{number of threads}), and start from 0.
+    The kernel matrix is Compressed Sparse Row matrix. It looks like:\\
+    \# 0 1283\\
+    24292 2.18522\\
+    24293 2.10063\\
+    24322 2.29456\\
+    24323 2.90529\\
+    24324 2.77207\\
+    24353 2.45755\\
+    24354 3.14743\\
+    24355 2.99618\\
+    24384 2.14853\\
+    where the number followed '\#' is the row-index, and another one is no. of nonzeros
+    in this row (1283 for current case). Then the following (1283) rows
+    are column-index and values. It should be noted that this folder is only a temporary folder 
+    in the inversion process, and now we delete it for concise.
 
     \item \verb!results/!:contains models (\verb!mod_iter*!)
                         and surface wave travel time (\verb!res*.dat!) of each iteration. The format 
                         of model files is: lon lat depth S-wave, and the format of 
-                        traveltime file is: interstation distance, observed traveltime and 
-                        synthetic traveltime for current model.
+                        traveltime file is: interstation distance, observed-traveltime,
+                        synthetic-traveltime, lat1, lon1, lat2, lon2, period, wavetype.
     \end{itemize}
 
     \section{Joint Inversion Module}
@@ -311,7 +328,7 @@ for(int j=0;j<nlon;j++){
     surface wave travel time (\verb!res_surf*.dat!) and graivty anomaly (\verb!res_grav*.dat!) 
     of each iteration. The format of gravity anomaly is:
     \begin{center}
-        Observed-anomalies Synthetic-anomalies
+        lon lat observed-anomalies synthetic-anomalies
     \end{center}
 
     \section{Gravity Module}
@@ -333,10 +350,8 @@ for(int j=0;j<nlon;j++){
 
     \subsection{Output Files}
     This module output only one file: \verb!gravmat.dat!. This is the density kernel 
-    for gravity anomaly. The format of it is:
-    \begin{center}
-        data-index model-index kernel
-    \end{center}
+    for gravity anomaly. It is also a Compressed Sparse Matrix, the format of it is the 
+    same as surface wave kernel in \ref{surface wave output files}.
 
     \section{Advanced Options}
     \subsection{Number of Threads used in Parallel Mode}\label{number of threads}
