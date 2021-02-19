@@ -6,7 +6,7 @@ $(out):  $(obj)
 	gfortran -o $(out) $(obj) 
 
 %.o: %.f90
-	gfortran -g -c $< -o $@ $(opt)
+	gfortran -g -c -march=native -O3 $< -o $@ $(opt)
 
 clean:
 	rm *.o *.mod

@@ -24,7 +24,7 @@ implicit none
 
 real(c_float),ALLOCATABLE     :: val(:)
 INTEGER(c_int),ALLOCATABLE    :: rw(:),col(:)
-INTEGER                       :: nonzeros
+INTEGER(c_int)                :: nonzeros
   
 contains
 subroutine aprod(x,y,m,n) ! y = y + A * x
@@ -35,7 +35,6 @@ subroutine aprod(x,y,m,n) ! y = y + A * x
   INTEGER                     ::i
 
   y(1:m) = 0.0
-
   do i=1,nonzeros
     y(rw(i)) = y(rw(i)) + val(i) * x(col(i))
   enddo
@@ -44,7 +43,7 @@ end subroutine aprod
 subroutine forward(nx,ny,nz,vr,vt,m,dsyn)
   use empirical
   implicit none
-  integer(c_int),INTENT(INOUT)           :: nx,ny,nz,m
+  integer(c_int),INTENT(IN)              :: nx,ny,nz,m
   real(c_float),INTENT(IN)               :: vr(nx,ny,nz),vt(nx,ny,nz)
   real(c_float),INTENT(INOUT)            :: dsyn(m)
 
@@ -56,49 +55,75 @@ subroutine forward(nx,ny,nz,vr,vt,m,dsyn)
   n = (nx -2) * (ny -2) * (nz -1)
   ALLOCATE(drho(n))
 
+  ! compute density difference
   do k=1,nz-1
     do j=1,ny-2
       do i=1,nx-2
-        nn = k * (nx-2) * (ny -2) + j * (nx-2) + i
+        nn = (k-1) * (nx-2) * (ny -2) + (j-1) * (nx-2) + i
         vs = vr(i+1,j+1,k)
         call empirical_relation(vs,vp,rho)
         drho(nn) = rho
         vs = vt(i+1,j+1,k)
         call empirical_relation(vs,vp,rho)
-        drho(nn) = drho(nn) - rho
+        drho(nn) = -drho(nn) + rho
       enddo
     enddo
   enddo
-
+  
+  ! compute gravity
   dsyn(1:m) = 0.0
-
   call aprod(drho,dsyn,m,n)
+
   DEALLOCATE(drho)
   return;
 end subroutine forward
 
-end
-
+end module sparsemat
 
 program main
   use sparsemat
   implicit none
 
-  CHARACTER(50)               :: refmod,truemod
-  real,ALLOCATABLE            :: vr(:,:,:),vt(:,:,:),dsyn(:),lat(:),lon(:)
-  INTEGER                     :: nx,ny,nz,m,eof
+  CHARACTER(50)               :: refmod,truemod,paramfile,obsgrav,gravmat
+  CHARACTER(50)               :: outfile,flag_remove_mean
+  real(c_float),ALLOCATABLE   :: vr(:,:,:),vt(:,:,:),dsyn(:),lat(:),lon(:)
+  INTEGER(c_int)              :: nx,ny,nz,m,eof
   real(c_float)               :: a,b,c,mean
-  INTEGER                     :: i,j,k
+  INTEGER(c_int)              :: i,j,k,dataid,num,rm_mean
+  CHARACTER(256)              :: line
+  CHARACTER                   :: dummy
+
+  ! extract input args
+  if(iargc() /= 7) then
+    print*,"please run ./this paramfile refmod truemod obsgrav gravmat &
+            remove_mean(false or true) outfile"
+    stop
+  else
+    call getarg(1,paramfile)
+    call getarg(2,refmod)
+    call getarg(3,truemod)
+    call getarg(4,obsgrav)
+    call getarg(5,gravmat)
+    call getarg(6,flag_remove_mean)
+    call getarg(7,outfile)
+
+    if(flag_remove_mean == "true") then 
+        rm_mean = 1
+    else if (flag_remove_mean == "false")then
+        rm_mean = 0
+    else
+        print*, "remove_mean should be one of [true,false]!"
+        stop
+    endif
+  endif
 
   ! read no. of nodes in each direction
-  open(11,file='DSurfTomo.in')
+  open(11,file=paramfile)
   read(11,*)nx,ny,nz
   close(11)
   ALLOCATE(vr(nx,ny,nz),vt(nx,ny,nz))
 
   ! read reference model,format is same to MOD
-  ! you could change it to your own reference file
-  refmod='MOD'
   open(11,file=refmod)
   read(11,*)(vr(0,0,i),i=1,nz)
   do k=1,nz
@@ -106,13 +131,14 @@ program main
       read(11,*)(vr(i,j,k),i=1,nx)
     enddo
     ! remove mean if required
-    !mean = sum(vr(:,:,k)) / real(nx*ny)
-    !vr(:,:,k) = vr(:,:,k) - mean
+    if(rm_mean == 1) then
+      mean = sum(vr(2:nx-1,2:ny-1,k)) / real((nx-2)*(ny-2))
+      vr(:,:,k) = mean
+    endif
   enddo
   close(11)
 
   ! read true model( read from results)
-  truemod='results/mod_iter_10.dat'
   open(11,file=truemod)
   do k=1,nz
     do j=1,ny
@@ -122,10 +148,11 @@ program main
     enddo
   enddo
   close(11)
+  print*,'finish reading reference and final model'
 
   ! read gravity data
   m = 0
-  open(11,file='obsgrav.dat')
+  open(11,file=obsgrav)
   do
     read(11,*,iostat=eof)
     if(eof==0) then
@@ -136,38 +163,49 @@ program main
   enddo
   close(11)
   ALLOCATE(lon(m),lat(m),dsyn(m))
-  open(11,file='obsgrav.dat')
+  open(11,file=obsgrav)
   do i=1,m
     read(11,*)lon(i),lat(i)
   enddo
   close(11)
+  print*,'finish reading gravity data'
 
   ! read gravity matrix
   nonzeros = 0
-  open(11,file='gravmat.dat')
+  open(11,file=gravmat)
   do
-    read(11,*,iostat=eof)
+    read(11,'(a)',iostat=eof) line
     if(eof==0) then
-      nonzeros = nonzeros + 1
+      if(line(1:1) /= '#') nonzeros = nonzeros + 1
     else
       exit
     endif
   enddo
   close(11)
   ALLOCATE(rw(nonzeros),val(nonzeros),col(nonzeros))
-  open(11,file='gravmat.dat')
-  do i=1,nonzeros
-    read(11,*)rw(i),col(i),val(i)
+  i = 1
+  open(11,file=gravmat)
+  do
+    read(11,'(a)',iostat=eof) line
+    if(eof/=0) exit 
+    read(line,*) dummy,dataid,num
+    rw(i:i+num-1) = dataid + 1
+    do j=0,num - 1
+      read(11,*)col(i + j),val(i + j)
+      col(i+j) = col(i+j) + 1
+    enddo
+    i = i + num
   enddo
   close(11)
+  print*,'finish reading gravity matrix, now begin forward computing'
 
-  ! compute
+  ! compute gravity
   call forward(nx,ny,nz,vr,vt,m,dsyn)
   mean = sum(dsyn(1:m)) / real(m)
   dsyn(1:m) = dsyn(1:m) - mean
 
   ! write
-  open(11,file='out.dat')
+  open(11,file=outfile)
   do i=1,m
     write(11,'(3f10.4)')lon(i),lat(i),dsyn(i)
   enddo
