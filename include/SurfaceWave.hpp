@@ -59,4 +59,5 @@ class SurfTime
     Eigen::VectorXi FrechetKernel(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data,
                         std::string save_path);
     void read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat);
+    void write_disper(Eigen::VectorXf &dsyn,std::string filename);
 };
