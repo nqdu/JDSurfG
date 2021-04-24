@@ -11,10 +11,12 @@ surfdir= ../SurfaceWave
 
 # c scripts
 src = surftomo.cpp main.cpp $(surfdir)/SurfaceWave.cpp \
-		../utils/gaussian.cpp ../utils/bkg_model.cpp
+		../utils/gaussian.cpp ../utils/bkg_model.cpp \
+		$(surfdir)/surfdisp.cpp
 
 # fortran src
-f90mp=$(surfdir)/fmm.f90 $(surfdir)/fmst.f90 
+f90mp=$(surfdir)/fmm.f90 $(surfdir)/fmst.f90  \
+		$(surfdir)/slegn96.f90  $(surfdir)/sregn96.f90 
 f90src =  ../utils/delsph.f90 ../utils/empirical.f90 ../utils/lsmrModule_csr.f90
 f77src = $(surfdir)/surfdisp96.f
 
