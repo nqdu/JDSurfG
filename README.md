@@ -8,7 +8,7 @@
 
 ~~3. Inhomegeneous grid in vertical direction.~~
 
-~~4. Analytical sensitvity kernels for surface wave dispersions.~~
+~~4. Analytical sensitvity kernels for surface wave dispersions~~
 
 ~~5. Water layers could be involved in inversion.~~ 
 
