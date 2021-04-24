@@ -4,6 +4,16 @@
 #include<string>
 #include"bkg_model.hpp"
 
+// FMST extensions
+extern "C"{
+void synthetic(int nx,int ny,double *velf,float goxdf,float gozdf,
+            float dvxdf,float dvzdf,float srcx,float srcz,
+            float *rcx,float *rcz,int nr,float *ttime);
+void CalFrechet(int nx,int ny,int nz,double *velf,float goxdf,float gozdf,
+                float dvxdf,float dvzdf,float srcx,float srcz,float *rcx,
+                float *rcz,int nr,float *ttime,double *kernel,float *frechet);
+}
+
 class StationPair
 {
     public:
