@@ -1,4 +1,6 @@
-TODO List (from easy to hard)  
+#Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
+
+#TODO List (from easy to hard)  
 
 ~~1. A more concise representation of station pairs with C++ class.~~
 
