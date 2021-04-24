@@ -8,9 +8,11 @@
 
 ~~3. Inhomegeneous grid in vertical direction.~~
 
-4. Water layers could be involved in inversion. 
+~~4. Analytical sensitvity kernels for surface wave dispersions ~~
 
-5. Different empirical relations for different region
+~~5. Water layers could be involved in inversion.~~ 
 
-6. Utilization of higher mode surface wave dispersion.
+6. Different empirical relations for different region
+
+7. Utilization of higher mode surface wave dispersion.
 
