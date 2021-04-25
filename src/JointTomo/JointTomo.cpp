@@ -6,6 +6,7 @@
 using Eigen::Tensor;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
+#define DEG2RAD M_PI/180.
 
 int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
                 std::vector<float> &rcz,std::vector<float> &v)
@@ -16,8 +17,8 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
         if(line[0] == '#') break;
         float stalat,stalon,velvalue,dist1;
         sscanf(line,"%f%f%f",&stalat,&stalon,&velvalue);
-        stalat=(90.0-stalat)*pi/180.0;
-        stalon=stalon*pi/180.0;
+        stalat=(90.0-stalat)* DEG2RAD;
+        stalon=stalon* DEG2RAD;
         rcx.push_back(stalat);
         rcz.push_back(stalon);
         v.push_back(velvalue);
@@ -201,8 +202,8 @@ void JointTomo::readdata(std::string paramfile,std::string modfile,std::string s
 
         // extract source station information
         sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
-        sta1_lat= (90.0-sta1_lat)*pi/180.0;
-        sta1_lon *= pi/180.0;
+        sta1_lat= (90.0-sta1_lat)*DEG2RAD;
+        sta1_lon *= DEG2RAD;
         std::string wtp;
         if ( wavetp==2 && veltp==0 ) 
             wtp="Rc";
@@ -376,7 +377,13 @@ assemble(std::string basedir,Tensor<float,3> &vsf,csr_matrix<float> &smat,
         int end = gmat.indptr[r + 1];
         int rwc = nsurf + r;
         smat.indptr[rwc + 1] = smat.indptr[rwc] + end - start;
-
+    }
+    omp_set_num_threads(nthreads);
+    #pragma omp parallel for shared(smat,gmat,vsf)
+    for(int r=0;r<ngrav;r++){
+        int start = gmat.indptr[r];
+        int end = gmat.indptr[r + 1];
+        int rwc = nsurf + r;
         for(int c=start;c<end;c++){ // loop around nonzero columns
             int col = gmat.indices[c];
             int k = col /((nx-2) * (ny-2));
