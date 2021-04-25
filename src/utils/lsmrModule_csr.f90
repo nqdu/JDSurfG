@@ -891,7 +891,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
     !   call Aprod2(m, n, v, u)          ! v = A'*u
         !call aprod(2,m,n,v,u,leniw,lenrw,iw,rw)
        !call aprod(2,m,n,v,u,lenrw,rw,col,val)
-       call aprod(2,m,n,v,u,val,indices,indptr)
+       call aprod_parallel(2,m,n,v,u,val,indices,indptr)
        !call aprod(2,spmat,v,u,m,n)
        alpha = dnrm2 (n, v, 1)
     end if
@@ -990,7 +990,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
       ! call Aprod1(m, n, v, u)             ! u = A*v
         !call aprod ( 1,m,n,v,u,leniw,lenrw,iw,rw )
        !call aprod(1,m,n,v,u,lenrw,rw,col,val)  
-       call aprod(1,m,n,v,u,val,indices,indptr)    
+       call aprod_parallel(1,m,n,v,u,val,indices,indptr)    
        beta   = dnrm2 (m, u, 1)
 
        if (beta > zero) then
@@ -1003,7 +1003,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
           !call Aprod2(m, n, v, u)          ! v = A'*u
           !call aprod ( 2,m,n,v,u,leniw,lenrw,iw,rw )
           !call aprod(2,m,n,v,u,lenrw,rw,col,val)
-          call aprod(2,m,n,v,u,val,indices,indptr)
+          call aprod_parallel(2,m,n,v,u,val,indices,indptr)
           if (localOrtho) then    ! Perform local reorthogonalization of V.
              call localVOrtho     ! Local-reorthogonalization of new v.
           end if
