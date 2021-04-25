@@ -558,7 +558,7 @@ void SurfTime::
 read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
 {
     omp_set_num_threads(nthreads);
-    #pragma parallel for shared(smat)
+    #pragma omp parallel for shared(smat)
     for(int p=0;p<nthreads;p++){
         std::string filename = basedir + "/" +  std::to_string(p) + ".txt";
 
