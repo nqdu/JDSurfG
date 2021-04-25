@@ -9,8 +9,8 @@
 #include<fstream>
 #include<stdlib.h>
 #include<math.h>
-#define  degrad2 (pi/180.0)
-#define  hpi2    (pi*0.5)
+#define  degrad2 (M_PI/180.0)
+#define  hpi2    (M_PI*0.5)
 #define  rearth2 6371.0
 #define G 6.667E-6
 /*
