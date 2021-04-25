@@ -1,9 +1,8 @@
 #pragma once
-#define pi 3.1415926535898
 extern "C"{
 void delsph(float flat1,float flon1,float flat2,float flon2,float *del);
 void empirical_relation(float *vsz,float *vpz,float *rhoz);
-void empirical_deriv(float vp,float vs,float *tmp1,float *tmp2);
+void empirical_deriv(float vp,float vs,float *drda,float *dadb);
 }
 
 // gaussian noise
