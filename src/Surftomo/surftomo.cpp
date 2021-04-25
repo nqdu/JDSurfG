@@ -6,6 +6,8 @@ using Eigen::Tensor;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
 
+#define DEG2RAD M_PI/180.
+
 int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
                 std::vector<float> &rcz,std::vector<float> &v)
 {
@@ -15,8 +17,8 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
         if(line[0] == '#') break; 
         float stalat,stalon,velvalue,dist1;
         sscanf(line,"%f%f%f",&stalat,&stalon,&velvalue);
-        stalat=(90.0-stalat)*pi/180.0;
-        stalon=stalon*pi/180.0;
+        stalat = (90.0-stalat) * DEG2RAD;
+        stalon=stalon* DEG2RAD;
         rcx.push_back(stalat);
         rcz.push_back(stalon);
         v.push_back(velvalue);
@@ -176,8 +178,8 @@ int DSurfTomo:: readdata(std::string paramfile,std::string datafile,
 
         // extract source station information
         sscanf(line1,"%c%f%f%d%d%d",&dummy,&sta1_lat,&sta1_lon,&period,&wavetp,&veltp);
-        sta1_lat= (90.0-sta1_lat)*pi/180.0;
-        sta1_lon *= pi/180.0;
+        sta1_lat= (90.0-sta1_lat)* DEG2RAD;
+        sta1_lon *= DEG2RAD;
         std::string wtp;
         if ( wavetp==2 && veltp==0 ) 
             wtp="Rc";
@@ -331,3 +333,5 @@ void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
         vsf(i+1,j+1,k) = temp;
     }}}
 }
+
+#undef DEG2RAD
