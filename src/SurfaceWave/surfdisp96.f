@@ -52,7 +52,7 @@ c     15 DEC 2019 - modified by Nanqiao Du at IGGCAS
 c       remove NP and NL restrictions
 c-----
        subroutine surfdisp96(thkm,vpm,vsm,rhom,nlayer,iflsph,iwave,
-     &                       mode,igr,kmax,t,cg)bind(c,name="surfdisp96")
+     &                       mode,igr,kmax,t,cg)bind(c,name="surfdisp96_")
         use,intrinsic :: iso_c_binding
         parameter(LER=0,LIN=5,LOT=66)
         integer NL, NL2, NLAY
