@@ -884,9 +884,9 @@ subroutine slegnpu(thk,vs,rhom,nlayer,&
     tm1 = (1.5/(ar * omega))**2 / tm
 
     ! convert duf/dm to dus/dm 
-    du2db = tm * du2db + cg * cp * dc2db * tm1 * vtp
-    du2dr = tm * du2dr + cg * cp * dc2dr * tm1 * rtp
-    du2dh = tm * du2dh + cg * cp * dc2dh * tm1 * dtp
+    du2db = (tm * du2db + cg * cp * dc2db * tm1) * vtp
+    du2dr = (tm * du2dr + cg * cp * dc2dr * tm1) * rtp
+    du2dh = (tm * du2dh + cg * cp * dc2dh * tm1) * dtp
 
     ! convert dcf/dm to dcs/dm
     dc2db = dc2db / tm**3 * vtp 
