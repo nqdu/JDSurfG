@@ -379,7 +379,7 @@ assemble(std::string basedir,Tensor<float,3> &vsf,csr_matrix<float> &smat,
         smat.indptr[rwc + 1] = smat.indptr[rwc] + end - start;
     }
     omp_set_num_threads(nthreads);
-    #pragma omp parallel for shared(smat,gmat,vsf)
+    #pragma omp parallel for shared(smat,vsf)
     for(int r=0;r<ngrav;r++){
         int start = gmat.indptr[r];
         int end = gmat.indptr[r + 1];
