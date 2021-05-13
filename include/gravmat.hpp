@@ -18,7 +18,7 @@ class OBSSphGraRandom{
     }
 
     void chancoor(int flag);
-    void read_obs_data(std::string filename);
+    void read_obs_data(std::string &filename);
 };
 
 /*	This model is used to compute gravity effects*/
@@ -39,7 +39,7 @@ class MOD3DSphGra{
     }
 
     void chancoor(int flag);
-    void read_model(std::string paramfile,std::string modinfile);
+    void read_model(std::string &paramfile,std::string &modinfile);
 };
 
 void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,csr_matrix<float> &smat);

@@ -51,7 +51,7 @@ void OBSSphGraRandom :: chancoor(int flag)
     }
 }
 
-void OBSSphGraRandom :: read_obs_data(std::string filename)
+void OBSSphGraRandom :: read_obs_data(std::string &filename)
 {
     std::ifstream infile;
     std::string line;
@@ -121,7 +121,7 @@ void MOD3DSphGra :: chancoor(int flag)
 	}
 }
 
-void MOD3DSphGra :: read_model(std::string paramfile,std::string modfile)
+void MOD3DSphGra :: read_model(std::string &paramfile,std::string &modfile)
 {
     std::ifstream fp;
     int i,j,k;
