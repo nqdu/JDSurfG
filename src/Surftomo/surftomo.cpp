@@ -31,7 +31,7 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
 int DSurfTomo:: readdata(std::string &paramfile,std::string &datafile,
                         std::string &modfile,std::string &modtrue )
 {
- // read paramfile
+    // read paramfile
     std::ifstream infile;
     std::string line;
     std ::istringstream info;    
