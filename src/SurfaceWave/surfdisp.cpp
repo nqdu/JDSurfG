@@ -60,7 +60,7 @@ double _flat2sphere(double t,double c,std::string wavetp)
  * @param keep_flat keep flat earth phase/group velocity or convert it to spherical
  */
 void surfdisp(float *thk,float *vp,float *vs,float *rho,
-            int nlayer,double *t,double *cg,int kmax,std::string wavetype,
+            int nlayer,double *t,double *cg,int kmax,const std::string &wavetype,
             int mode,bool sphere,bool keep_flat)
 {
     int iwave,igr,ifsph=0;

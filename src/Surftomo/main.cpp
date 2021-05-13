@@ -3,7 +3,7 @@
 using Eigen::Tensor;
 using Eigen::VectorXf;
 
-void print_mean_and_rms(VectorXf a,std::string info)
+void print_mean_and_rms(const VectorXf &a,std::string info)
 {
     float mean = a.mean();
     float rms = a.array().pow(2.).mean() - mean * mean;

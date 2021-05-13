@@ -62,12 +62,12 @@ class SurfTime
     void DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::MatrixXd &pv);
     void SurfWaveKernel(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::MatrixXd &pv,
                            Eigen::Tensor<double,3> &kernel );
-    int get_period_index(int idx,std::string wavetype);
+    int get_period_index(int idx,std::string &wavetype);
 
     public:
     void TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data);
     Eigen::VectorXi FrechetKernel(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorXf &data,
-                        std::string save_path);
-    void read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat);
-    void write_disper(Eigen::VectorXf &dsyn,std::string filename);
+                        std::string &save_path);
+    void read_Frechet_Kernel(std::string &basedir,csr_matrix<float> &smat);
+    void write_disper(Eigen::VectorXf &dsyn,std::string &filename);
 };

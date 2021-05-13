@@ -1,5 +1,5 @@
 #include<math.h>
-#define pi 3.1415926535898
+const double pi = M_PI;
 /*
     Convert geographic latitude to geocentric latitude
     hlat (input) = geographic latitude in radians (north positive)

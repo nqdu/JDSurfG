@@ -34,8 +34,8 @@ class DSurfTomo{
     int unknowns,num_data;
     
     public:
-    int readdata(std::string paramfile,std::string datafile,
-                std::string modfile,std::string modture );
+    int readdata(std::string &paramfile,std::string &datafile,
+                std::string &modfile,std::string &modture );
     void checkerboard();
     void forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &dsyn);
     void inversion(Eigen::Tensor<float,3> &vsf,Eigen::VectorXf &dsyn);
@@ -57,13 +57,13 @@ class JointTomo{
     csr_matrix<float> gmat; // gravity forward computation matrix
 
 
-    void assemble(std::string basedir,Eigen::Tensor<float,3> &vsf,
-                    csr_matrix<float> &smat,float weight1,float weight2);
+    void assemble(Eigen::Tensor<float,3> &vsf,csr_matrix<float> &smat,
+                    float weight1,float weight2);
 
     public:
-    void readdata(std::string paramfile,std::string modfile,std::string surfdata,
-                 std::string gravdata,std::string gravmat,std::string refmod,
-                 std::string modtrue);
+    void readdata(std::string &paramfile,std::string &modfile,std::string &surfdata,
+                 std::string &gravdata,std::string &gravmat,std::string &refmod,
+                 std::string &modtrue);
     
     void checkerboard();
     void forward(Eigen::Tensor<float,3> &vs,Eigen::VectorXf &dsyn,Eigen::VectorXf &dg);

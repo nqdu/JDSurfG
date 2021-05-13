@@ -6,7 +6,7 @@ using Eigen::Tensor;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
 
-#define DEG2RAD M_PI/180.
+const double DEG2RAD=M_PI/180.;
 
 int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
                 std::vector<float> &rcz,std::vector<float> &v)
@@ -28,8 +28,8 @@ int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
     return nr;   
 }
 
-int DSurfTomo:: readdata(std::string paramfile,std::string datafile,
-                        std::string modfile,std::string modtrue )
+int DSurfTomo:: readdata(std::string &paramfile,std::string &datafile,
+                        std::string &modfile,std::string &modtrue )
 {
  // read paramfile
     std::ifstream infile;
@@ -333,5 +333,3 @@ void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
         vsf(i+1,j+1,k) = temp;
     }}}
 }
-
-#undef DEG2RAD

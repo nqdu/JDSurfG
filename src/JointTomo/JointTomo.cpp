@@ -6,7 +6,7 @@
 using Eigen::Tensor;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
-#define DEG2RAD M_PI/180.
+const double DEG2RAD = M_PI/180.;
 
 int read_receiver(FILE *fp,char *line,std::vector<float> &rcx,
                 std::vector<float> &rcz,std::vector<float> &v)
@@ -45,9 +45,10 @@ float dnrm2(float *a,int n)
     return std;
 }
 
-void JointTomo::readdata(std::string paramfile,std::string modfile,std::string surfdata,
-                 std::string gravdata,std::string gravmat,std::string refmod,
-                 std::string modtrue)
+void JointTomo::
+readdata(std::string &paramfile,std::string &modfile,std::string &surfdata,
+        std::string &gravdata,std::string &gravmat,std::string &refmod,
+        std::string &modtrue)
 {
    // step1 : read paramfile
     std::ifstream infile;
@@ -362,7 +363,7 @@ void JointTomo:: checkerboard()
  * then G*drho = g0 could be changed to G'*dvs = g0 
  */ 
 void JointTomo:: 
-assemble(std::string basedir,Tensor<float,3> &vsf,csr_matrix<float> &smat,
+assemble(Tensor<float,3> &vsf,csr_matrix<float> &smat,
          float weight1,float weight2)
 {
     // get model and matrix dimensions
@@ -462,7 +463,7 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
     // assembling derivative matrix
     std::cout << "Assembling derivative Matrix ..." << std::endl;
     surf.read_Frechet_Kernel(basedir,smat);
-    assemble(basedir,vsf,smat,sigma1,sigma2);
+    assemble(vsf,smat,sigma1,sigma2);
 
     // add weights
     for(int i=0;i<surf.num_data;i++){

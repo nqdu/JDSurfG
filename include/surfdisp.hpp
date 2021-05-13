@@ -95,7 +95,7 @@ void sregnpu_(float *thk,float *vp,float *vs,float *rhom,
 
 // surface wave dispersion c++ wrapper
 void surfdisp(float *thk,float *vp,float *vs,float *rho,
-            int nlayer,double *t,double *cg,int kmax,std::string wavetype,
+            int nlayer,double *t,double *cg,int kmax,const std::string &wavetype,
             int mode=0,bool sphere=false,bool keep_flat=true);
 
 

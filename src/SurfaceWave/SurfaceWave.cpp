@@ -10,7 +10,7 @@ using Eigen:: VectorXf;
 using Eigen::VectorXd;
 
 // compute period index
-int SurfTime :: get_period_index(int period_idx,std::string wavetype)
+int SurfTime :: get_period_index(int period_idx,std::string &wavetype)
 {
     int idx;
     if(wavetype == "Rc") idx = period_idx;
@@ -483,7 +483,7 @@ void SurfTime :: TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorX
 
 Eigen::VectorXi 
 SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
-                            std::string save_dir)
+                            std::string &save_dir)
 {
   // get vs-dimension
     int nx = mod.nx,ny = mod.ny,nz= mod.nz;
@@ -555,7 +555,7 @@ SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
 }
 
 void SurfTime::
-read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
+read_Frechet_Kernel(std::string &basedir,csr_matrix<float> &smat)
 {
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(smat)
@@ -595,13 +595,13 @@ read_Frechet_Kernel(std::string basedir,csr_matrix<float> &smat)
 }
 
 void SurfTime:: 
-write_disper(Eigen::VectorXf &dsyn,std::string filename){
+write_disper(Eigen::VectorXf &dsyn,std::string &filename){
     std::ofstream outfile;
     outfile.open(filename);
 
     // output
     int c = 0; // counter
-    double rad2deg = 180. / M_PI;
+    const double rad2deg = 180. / M_PI;
     for(int n=0;n<Pairs.size();n++){
         StationPair &p = Pairs[n];
         float elat = (M_PI * 0.5 - p.srcx) * rad2deg, elon = p.srcz * rad2deg;

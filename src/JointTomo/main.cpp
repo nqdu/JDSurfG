@@ -2,9 +2,10 @@
 #include<string>
 #include<fstream>
 #include"tomography.hpp"
-using namespace Eigen;
+using Eigen::VectorXf;
+using Eigen::Tensor;
 
-void print_mean_and_rms(VectorXf a,std::string info,float weight1=0.0,float weight2=0.0)
+void print_mean_and_rms(const VectorXf &a,std::string info,float weight1=0.0,float weight2=0.0)
 {
     float mean = a.mean();
     float rms = a.array().pow(2.).mean() - mean * mean;
@@ -96,7 +97,7 @@ int main(int argc, char* argv[]){
     outfile.close();
 
     // remove mean of gravity data
-    Map<VectorXf> Gr(tomo.obsg.Gr,tomo.obsg.np);
+    Eigen::Map<VectorXf> Gr(tomo.obsg.Gr,tomo.obsg.np);
     float mean = Gr.sum() / tomo.obsg.np;
     Gr.array() -= mean;
     
