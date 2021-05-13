@@ -9,10 +9,10 @@
 #include<fstream>
 #include<stdlib.h>
 #include<math.h>
-#define  degrad2 (M_PI/180.0)
-#define  hpi2    (M_PI*0.5)
-#define  rearth2 6371.0
-#define G 6.667E-6
+const double  degrad2 = M_PI/180.0;
+const double  hpi2 =  M_PI*0.5;
+const float  rearth2=6371.0;
+const float G = 6.667E-6;
 /*
 	Change NMAX and NSCALE bigger for more accurate results,
 	but bigger NMAX and NSCALE means much more computation.
@@ -20,12 +20,11 @@
 //===minimum and maximum nodes for GLQ
 //===the ratio of distance/GLQ grid spacing
 //===the minmum scale for GLQ, in km
-#define	NMIN      5
-#define NMAX      256
-#define NSCALE    5
-#define MINDISKM  0.5
-#define maxdis 100.0 // maximum distance between 2 points 
-#define ftol 1.0e-6
+const int NMIN=5,NMAX=256;
+const int NSCALE = 5;
+const double MINDISKM = 0.5;
+const float maxdis = 100.0;// maximum distance between 2 points 
+const float ftol = 1.0e-6;
 
 void OBSSphGraRandom :: chancoor(int flag)
 {
@@ -511,15 +510,4 @@ void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
     delete[] data;
 
 }
-
-#undef	NMIN
-#undef NMAX
-#undef NSCALE
-#undef MINDISKM
-#undef maxdis
-#undef ftol
-#undef  degrad2
-#undef  hpi2
-#undef  rearth2
-#undef  G
 
