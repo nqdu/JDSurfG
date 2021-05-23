@@ -1,9 +1,8 @@
 #pragma once
-extern "C"{
-void delsph(float flat1,float flon1,float flat2,float flon2,float *del);
-void empirical_relation(float *vsz,float *vpz,float *rhoz);
-void empirical_deriv(float vp,float vs,float *drda,float *dadb);
-}
+
+// spherical distance
+void delsph(float colatrad1,float lonrad1,float colatrad2,
+             float lonrad2,float &del);
 
 // gaussian noise
 double gaussian();

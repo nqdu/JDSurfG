@@ -12,20 +12,9 @@ class MOD3d{
     Eigen::Tensor<float,3> vs;
 
     void gravity(csr_matrix<float> &A,Eigen::Tensor<float,3> &vsf,Eigen::VectorXf &dgsyn);
-
-    /*
-    MOD3d & operator = (const MOD3d &md){
-        nx = md.nx;
-        ny = md.ny;
-        nz = md.nz; 
-        goxd = md.goxd; gozd = md.gozd;
-        dvxd = md.dvxd; dvzd = md.dvzd;
-        lon = md.lon; lat = md.lat;
-        dep = md.dep;
-        vs = md.vs;
-
-        return *this;
-    }*/
-
     void add_regularization(csr_matrix<float> &smat,float smooth);
+
+    // empirical relations
+    void empirical_relation(float vsz,float &vpz,float &rhoz);
+    void empirical_deriv(float vp,float vs,float &drda,float &dadb);
 };
