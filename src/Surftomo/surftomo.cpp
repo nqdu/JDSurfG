@@ -198,7 +198,7 @@ int DSurfTomo:: readdata(std::string &paramfile,std::string &datafile,
             float dist;
             pair.rcx[i] = rcx[i];
             pair.rcz[i] = rcz[i];
-            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],&dist);
+            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],dist);
             pair.dist[i] = dist;
             pair.obstime[i] = dist / v[i];
             dall ++ ;
@@ -330,6 +330,6 @@ void DSurfTomo::inversion(Tensor<float,3> &vsf,VectorXf &dsyn)
         float temp = dx(i,j,k) + vsf(i+1,j+1,k);
         if(temp > maxvel) temp = maxvel;
         if(temp < minvel) temp = minvel;
-        vsf(i+1,j+1,k) = temp;
+        if(vsf(i+1,j+1,k) !=0.0) vsf(i+1,j+1,k) = temp;
     }}}
 }

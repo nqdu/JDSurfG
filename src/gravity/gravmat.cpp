@@ -200,24 +200,6 @@ void MOD3DSphGra :: read_model(std::string &paramfile,std::string &modfile)
     for(i=0;i<nz;i++){
         fp >> dep[i];
     }
-    /*
-    fp >> v;
-
-    // allocate space for density
-    density0 = new float [n];
-    
-    // velocity model has shape (dep,lon,lat)
-    float vp;
-    for(k = 0;k < nz+1;k++){
-    for(i = 0;i < nx+2;i++){
-    for(j=0;j<ny+2;j++){
-        n = k*nx * ny + (i-1) * ny + j -1;
-        fp >> v;
-        if(i == 0||j == 0||k == nz||i == nx+1||j == ny+1)
-            continue;
-        empirical_relation(&v,&vp,density0+n);
-    }}}
-    israd = 0;*/
     fp.close();
 }
 
