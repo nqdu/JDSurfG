@@ -152,7 +152,7 @@ int main(int argc, char* argv[]){
 
     // compute theoretical traveltimes for last iteration
     std::cout <<std::endl;
-    std::cout << " synthetic traveltime for the result model " << std::endl;
+    std::cout << "synthetic traveltime for the result model " << std::endl;
     tomo.forward(vsf,dsyn,dg);
     mean = dg.sum() / dg.size();
     dg.array() -= mean;

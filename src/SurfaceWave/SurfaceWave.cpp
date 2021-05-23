@@ -375,7 +375,7 @@ void SurfTime ::DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::Matrix
         float v[nz],rho[nz],vp[nz];
         for(int k=0;k<nz;k++){
             v[k] = vs0(k,i,j);
-            empirical_relation(v+k,vp+k,rho+k);
+            mod.empirical_relation(v[k],vp[k],rho[k]);
         }
 
         // compute frechet kernel
@@ -422,7 +422,7 @@ void SurfTime:: SurfWaveKernel(MOD3d &mod,Tensor<float,3> &vs,
         float v[nz],rho[nz],vp[nz];
         for(int k=0;k<nz;k++){
             v[k] = vs0(k,i,j);
-            empirical_relation(v+k,vp+k,rho+k);
+            mod.empirical_relation(v[k],vp[k],rho[k]);
         }
 
         // compute dispersion map for vs,vp and rho
@@ -437,7 +437,7 @@ void SurfTime:: SurfWaveKernel(MOD3d &mod,Tensor<float,3> &vs,
             float drda,dadb;
         for(int jj=0;jj<nz;jj++){
             if(v[jj] == 0.0 && jj == 0) continue; // water layer
-            empirical_deriv(vp[jj],v[jj],&drda,&dadb);
+            mod.empirical_deriv(vp[jj],v[jj],drda,dadb);
             kernel0(jj,ii,n) = kvs(jj,ii) + kvp(jj,ii) * dadb 
                               + krho(jj,ii) * drda * dadb;
         }}

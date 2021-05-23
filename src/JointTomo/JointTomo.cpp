@@ -223,7 +223,7 @@ readdata(std::string &paramfile,std::string &modfile,std::string &surfdata,
             float dist;
             pair.rcx[i] = rcx[i];
             pair.rcz[i] = rcz[i];
-            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],&dist);
+            delsph(sta1_lat,sta1_lon,rcx[i],rcz[i],dist);
             pair.dist[i] = dist;
             pair.obstime[i] = dist / v[i];
             dall ++ ;
@@ -394,9 +394,9 @@ assemble(Tensor<float,3> &vsf,csr_matrix<float> &smat,
             // compute drho/dvs, store it in tmp1 * tmp2
             float vp,vs,rho;
             vs = vsf(i,j,k);
-            empirical_relation(&vs,&vp,&rho);
+            mod.empirical_relation(vs,vp,rho);
             float tmp1,tmp2;
-            empirical_deriv(vp,vs,&tmp1,&tmp2);
+            mod.empirical_deriv(vp,vs,tmp1,tmp2);
 
             // append gmat to smat
             int count = smat.indptr[rwc] + c - start;
@@ -501,6 +501,6 @@ void JointTomo:: inversion(Tensor<float,3> &vsf,VectorXf &dsyn,VectorXf &dg)
         temp = temp + vsf(i+1,j+1,k);
         if(temp > maxvel) temp = maxvel;
         if(temp < minvel) temp = minvel;
-        vsf(i+1,j+1,k) = temp;
+        if(vsf(i+1,j+1,k) !=0.0) vsf(i+1,j+1,k) = temp;
     }}}
 }

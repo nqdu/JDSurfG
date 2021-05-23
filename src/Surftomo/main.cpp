@@ -59,7 +59,7 @@ int main(int argc, char* argv[]){
 
    // checkerboard test if required
     if(tomo.param.ifsyn == 1){
-        std::cout<<" Checkerboard Resolution Test Begin ..." << std::endl;
+        std::cout<<"Checkerboard Resolution Test Begin ..." << std::endl;
         tomo.checkerboard();
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]){
 
     // compute theoretical traveltimes for last iteration
     std::cout <<std::endl;
-    std::cout << " synthetic traveltime for the result model " << std::endl;
+    std::cout << "synthetic traveltime for the result model " << std::endl;
     tomo.forward(vsf,dsyn);
 
     // compute mean and rms of residuals
