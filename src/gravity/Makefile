@@ -11,7 +11,7 @@ utils=../utils
 # c scripts
 src = $(shell find *.cpp) $(utils)/spherical.cpp  $(utils)/gauleg.cpp
 # objective
-cppobj = $(src:%.cpp=%.o) $(utils)/empirical.o
+cppobj = $(src:%.cpp=%.o)
 
 $(out):  $(cppobj)
 	$(cc)  -o ../../bin/$(out) $(cppobj)  -fopenmp $(gsl_lib)

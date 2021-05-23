@@ -7,17 +7,11 @@ includes = -I../../include
 # c scripts
 src = gaussian.cpp spherical.cpp
 
-# fortran src
-f90mp=empirical.f90 delsph.f90
-
 # objective
 cppobj = $(src:%.cpp=%.o) gauleg.o bkg_model.o
-f90obj= $(f90mp:%.f90=%.o) lsmrModule_csr.o 
+f90obj= lsmrModule_csr.o 
 
 main: $(f90obj)  $(cppobj)
-
-%.o:%.f90
-	$(FC) -g -c $< -o $@  $(opt)
 
 lsmrModule_csr.o : lsmrModule_csr.f90
 	$(FC) -g -c $< -o $@  $(opt) -fopenmp
