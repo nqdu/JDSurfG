@@ -1,13 +1,20 @@
 # Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
-Version 3.0+. Important versions! This version is about **5-10 times faster** than previous versions!  
+Version 3.1. Update from version 3.0. Version 3.0+ is about **5-10 times faster** than previous versions!
+
+## Note
+Please note that the format of the input files are a little different from previous versions!
 
 ## New Features
+* Parallel linear system solvers in `src/utils/lsmrModule_csr.f90`.
 * Rewrite `slegn96` and `sregn96` in [Computer Programs in Seismology](http://www.eas.slu.edu/eqc/eqccps.html). Now analytical derivatives for Love and Rayleigh wave dispersion could be utilized.
-* Water layer could be involved in joint inversion.
+
+## Updates
+* Update parameter files, docs and references.
+* Add I/O functions.
 
 ## Bug Fix
-* Fix the compiled name of function `surfdisp96`  to `surfdisp96_` in `src/SurfaceWave/surfdisp96.f`.
-* Fix bugs in parallel reading.
+* Fix bugs in `utils/gravity_forward.f90`
+* Fix bugs in the computing gravity matrix.
 
 ## TODO List (from easy to hard)  
 
