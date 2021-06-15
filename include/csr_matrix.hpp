@@ -81,14 +81,14 @@ class csr_matrix{
     */
     void aprod(int mode,T *x, T *y){
         if(mode == 1){ // y = y + A * x
-            for(int i=0;i<MATRIX_ROW;i++){
-            for(int j=indptr[i];j<indptr[i+1];j++){
+            for(unsigned int i=0;i<MATRIX_ROW;i++){
+            for(unsigned int j=indptr[i];j<indptr[i+1];j++){
                 y[i] += data[j] * x[indices[j]];
             }}
         }
         else{
-            for(int i=0;i<MATRIX_ROW;i++){
-            for(int j=indptr[i];j<indptr[i+1];j++){
+            for(unsigned int i=0;i<MATRIX_ROW;i++){
+            for(unsigned int j=indptr[i];j<indptr[i+1];j++){
                 x[indices[j]] += data[j] * y[i];
             }}
         }
@@ -96,19 +96,19 @@ class csr_matrix{
 
     void cpp2fortran(bool inverse=false){
         if(!inverse){
-            for(int i=0;i<nonzeros;i++)indices[i] +=1;
-            for(int i=0;i<MATRIX_ROW+1;i++) indptr[i] +=1;
+            for(unsigned int i=0;i<nonzeros;i++)indices[i] +=1;
+            for(unsigned int i=0;i<MATRIX_ROW+1;i++) indptr[i] +=1;
         }
         else{
-            for(int i=0;i<nonzeros;i++)indices[i] -=1;
-            for(int i=0;i<MATRIX_ROW+1;i++) indptr[i] -=1;
+            for(unsigned int i=0;i<nonzeros;i++)indices[i] -=1;
+            for(unsigned int i=0;i<MATRIX_ROW+1;i++) indptr[i] -=1;
         }
     }
 
     void LsmrSolver(T *b,T *x,LSMRDict<float> &dict){
 
         // initialize x
-        for(int i=0;i<MATRIX_COL;i++) x[i] = 0.0;
+        for(unsigned int i=0;i<MATRIX_COL;i++) x[i] = 0.0;
         cpp2fortran();
 
         // solve by lsmr module
@@ -118,7 +118,7 @@ class csr_matrix{
         LSMR_csr(MATRIX_ROW,MATRIX_COL,data,indices,indptr,b,dict.damp,dict.atol,dict.btol,
             dict.conlim,dict.itnlim,dict.localSize,x,&dict.istop,
             &dict.itn,&dict.anorm,&dict.acond,&dict.rnorm,
-            &dict.arnorm,&dict.xnorm,show);
+            &dict.arnorm,&dict.xnorm,show,dict.num_threads);
         cpp2fortran(true);
     }
 
@@ -133,7 +133,6 @@ class csr_matrix{
         // read from file
         char line[100],dummy;
         int rw_idx,nar;
-        int ierr;
         
         while(fgets(line,sizeof(line),fp)!=NULL){
             if(line[0] != '#') break;
@@ -143,7 +142,7 @@ class csr_matrix{
             int end = indptr[rw_idx + 1];
             //std::cout << start << " " << end << std::endl;
             for(int i=start;i<end;i++){
-                ierr = fscanf(fp,"%d%f\n",indices +i ,data + i);
+                assert(fscanf(fp,"%d%f\n",indices +i ,data + i) == 2);
             }
         }
     }
