@@ -14,7 +14,7 @@
 4                                 # no.of threads used 
 
 # inversion parameters
-20.0 1.0                          # smooth damp
+20.0 0.01                          # smooth damp
 2.0 4.7                           # minimum velocity, maximum velocity (a priori information)
 10                                # maximum iteration
 2                                 # no. of threads used in Linear System Solver
