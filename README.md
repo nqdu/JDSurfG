@@ -1,6 +1,5 @@
 # Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
 Version 3.0+. Important versions! This version is about **5-10 times faster** than previous versions!  
-It is ready for use but documentation and recommendations are still under construction.
 
 ## New Features
 * Rewrite `slegn96` and `sregn96` in [Computer Programs in Seismology](http://www.eas.slu.edu/eqc/eqccps.html). Now analytical derivatives for Love and Rayleigh wave dispersion could be utilized.
