@@ -16,7 +16,7 @@ subroutine empirical_relation(vsz,vpz,rhoz)bind(c,name="empirical_relation")
           0.000106*vpz**5
   
 end subroutine empirical_relation
-end
+end module empirical
 
 module sparsemat
 use,intrinsic                 :: iso_c_binding
@@ -41,7 +41,7 @@ subroutine aprod(x,y,m,n) ! y = y + A * x
 end subroutine aprod
 
 subroutine forward(nx,ny,nz,vr,vt,m,dsyn)
-  use empirical
+  use empirical,only                     : empirical_relation
   implicit none
   integer(c_int),INTENT(IN)              :: nx,ny,nz,m
   real(c_float),INTENT(IN)               :: vr(nx,ny,nz),vt(nx,ny,nz)
@@ -125,7 +125,7 @@ program main
 
   ! read reference model,format is same to MOD
   open(11,file=refmod)
-  read(11,*)(vr(0,0,i),i=1,nz)
+  read(11,*)(vr(1,1,i),i=1,nz)
   do k=1,nz
     do j=1,ny
       read(11,*)(vr(i,j,k),i=1,nx)
