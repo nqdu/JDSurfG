@@ -1,5 +1,5 @@
 # Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
-Version 3.0. Important version! This version is about **5-10 times faster** than previous versions!  
+Version 3.0+. Important versions! This version is about **5-10 times faster** than previous versions!  
 It is ready for use but documentation and recommendations are still under construction.
 
 ## New Features
