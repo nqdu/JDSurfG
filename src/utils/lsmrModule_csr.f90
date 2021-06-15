@@ -71,7 +71,17 @@ module lsmrblasInterface
  
 !nqdu
 module lsmr_csr_matrix
+use,intrinsic :: iso_c_binding
+implicit none
+integer(c_int)          :: nprocs = 1
 contains
+
+subroutine set_threads(nthreads)
+   implicit none
+   integer(c_int)    :: nthreads
+
+   nprocs = nthreads 
+end subroutine set_threads 
 
 subroutine aprod(mode, m, n, x, y,val,indices,indptr)
    use lsmrDataModule, only : dp
@@ -116,26 +126,32 @@ subroutine aprod_parallel(mode, m, n, x, y,val,indices,indptr)
    integer i,j;
    integer rank
 
-   ! allocate space
-   if(mode == 1) then 
-      allocate(ytmp(m,4))
-   else 
-      allocate(xtmp(n,4))
+   ! check nthreads
+   if(nprocs == 1) then 
+      call aprod(mode,m,n,x,y,val,indices,indptr)
+      RETURN;
    endif
 
-   call omp_set_num_threads(4)
+   ! allocate space
+   if(mode == 1) then 
+      allocate(ytmp(m,nprocs))
+   else 
+      allocate(xtmp(n,nprocs))
+   endif
+
+   call omp_set_num_threads(nprocs)
    !$omp parallel do shared(mode,m,n,val,indices,indptr,xtmp) private(i,j,rank)
-   do rank=1,4
+   do rank=1,nprocs
       if(mode == 1) then 
          ytmp(:,rank) = 0.0 
-         do i=rank,m,4
+         do i=rank,m,nprocs
             do j=indptr(i),indptr(i+1)-1
                ytmp(i,rank) = ytmp(i,rank) + val(j) * x(indices(j))
             enddo
          enddo
       else 
          xtmp(:,rank) = 0.0
-         do i=rank,m,4
+         do i=rank,m,nprocs
             do j=indptr(i),indptr(i+1)-1
                xtmp(indices(j),rank) = xtmp(indices(j),rank) + val(j) * y(i)
             enddo
@@ -562,12 +578,12 @@ contains
 
 subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
                localSize,x, istop, itn, normA,&
-               condA, normr, normAr, normx,verbose ) bind(C,name="LSMR_csr")
+               condA, normr, normAr, normx,verbose,num_threads) bind(C,name="LSMR_csr")
 !subroutine LSMR  ( m, n, leniw, lenrw,iw,rw, b, damp,               &
 !                     atol, btol, conlim, itnlim, localSize, nout,      &
 !                     x, istop, itn, normA, condA, normr, normAr, normx )
-   use lsmr_csr_matrix,only      : aprod,aprod_parallel
-   integer(c_int),value, intent(in) :: m,n,verbose
+   use lsmr_csr_matrix,only      : aprod,aprod_parallel,set_threads
+   integer(c_int),value, intent(in) :: m,n,verbose,num_threads
    integer(c_int), INTENT(IN) :: indices(*),indptr(*)
    real(dp),INTENT(IN) :: val(*)
 
@@ -865,6 +881,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
 
     ! Initialize.
    !open(nout,file="lsmr.log")
+    call set_threads(num_threads)
     localVecs = min(localSize,m,n)
     show = verbose > 0
     if (show) then
