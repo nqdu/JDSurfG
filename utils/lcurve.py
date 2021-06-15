@@ -73,15 +73,10 @@ def convert(md,x,nx,ny,nz):
                 if i<nz-1 and j>=1 and j<=ny-2 and  k>=1 and k<=nx-2:
                     #print(idx)
                     x[idx] = md[i*ny*nx+j*nx+k,3]
-    
 
-def main():
-    nx = 33 
-    ny = 36
-    nz = 25
-    n = (nx-2) * (ny-2) * (nz - 1)
-
+def get_laplacian(nx,ny,nz):
     # generate csr_matrix
+    n = (nx-2) * (ny-2) * (nz - 1)
     nonzeros = n * 7
     indptr = np.zeros((n+1),dtype=np.int)
     indices = np.zeros((nonzeros),dtype=np.int )
@@ -91,10 +86,16 @@ def main():
     data = data[:nonzeros]
     smat = csr_matrix((data, indices, indptr),shape=(n,n))
 
-    # load every folder
+    return smat
+
+def lcurve_joint(nx,ny,nz,sigma1,sigma2,smat):
+    n = (nx-2) * (ny-2) * (nz - 1)
+
+    # check output folders
     filenames = glob("storage/*")
     d = np.zeros((len(filenames),3))
 
+    # loop to compute rms and smoothness
     for i,f in enumerate(filenames):
         # get smooth param
         smooth = float(f.split('results')[-1])
@@ -105,8 +106,8 @@ def main():
         dg = np.loadtxt(f + "/res_grav1.dat")
         ns = ds.shape[0]
         ng = dg.shape[0]
-        rms = np.sum((ds[:,1] - ds[:,2])**2 / 1.4**2)
-        rmg = np.sum((dg[:,2] - dg[:,3])**2 * ns/ng / 10**2)
+        rms = np.sum((ds[:,1] - ds[:,2])**2 / sigma1**2)
+        rmg = np.sum((dg[:,2] - dg[:,3])**2 * ns/ng / sigma2**2)
         rms = np.sqrt(rms + rmg)
 
         # compute Lm
@@ -125,12 +126,77 @@ def main():
     d = d[idx,:]
 
     # save lcurve
-    np.savetxt("lcurve.dat",d,fmt='%f')
+    np.savetxt("lcurve_joint.dat",d,fmt='%f')
 
     # draw
     plt.plot(d[:,1],d[:,2])
     plt.scatter(d[:,1],d[:,2])
     plt.show()
-    
 
+def lcurve_surftomo(nx,ny,nz,smat):
+    n = (nx-2) * (ny-2) * (nz - 1)
+
+    # check output folders
+    filenames = glob("storage/*")
+    d = np.zeros((len(filenames),3))
+
+    # loop to compute rms and smoothness
+    for i,f in enumerate(filenames):
+        # get smooth param
+        smooth = float(f.split('results')[-1])
+        d[i,0] = smooth
+
+        # compute rms
+        ds = np.loadtxt(f + "/res1.dat")
+        rms = np.sum((ds[:,1] - ds[:,2])**2)
+        rms = np.sqrt(rms)
+
+        # compute Lm
+        md = np.loadtxt(f + "/mod_iter1.dat")
+        md -= np.loadtxt(f + "/mod_iter0.dat")
+        x = np.zeros((n))
+        convert(md,x,nx,ny,nz)
+        y = np.sqrt(np.sum((smat * x)**2))
+
+        d[i,1] = rms 
+        d[i,2] = y 
+
+        print(smooth)
+    
+    idx = np.argsort(d[:,0])
+    d = d[idx,:]
+
+    # save lcurve
+    np.savetxt("lcurve_surftomo.dat",d,fmt='%f')
+
+    # draw
+    plt.plot(d[:,1],d[:,2])
+    plt.scatter(d[:,1],d[:,2])
+    plt.show()    
+
+def main():
+    ################################
+    # please make sure your parameters
+    # are compatible with Parameter file
+    # model dimension
+    nx = 33 # nlat
+    ny = 36 # nlon
+    nz = 25 # nz
+
+    # std error of each data, only in joint invesion
+    std_surf = 1.4
+    std_grav = 10.
+    ################################
+    # end                          #
+    ################################
+
+    # get laplacian
+    smat = get_laplacian(nx,ny,nz)
+
+    # lcurve for joint inversion
+    lcurve_joint(nx,ny,nz,std_surf,std_grav,smat)
+
+    # lcurve for surftomo
+    #lcurve_surftomo(nx,ny,nz,smat)
+    
 main()
