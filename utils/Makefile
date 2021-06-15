@@ -1,12 +1,13 @@
 src=$(shell find *.f90)
 obj = $(src:%.f90=%.o)
 out = ../bin/syngrav
+include ../include/Makefile
 
 $(out):  $(obj)
-	gfortran -o $(out) $(obj) 
+	$(FC) -o $(out) $(obj) 
 
 %.o: %.f90
-	gfortran -g -c -march=native -O3 $< -o $@ $(opt)
+	$(FC) $(FFLAGS) -g -c $< -o $@ 
 
 clean:
 	rm *.o *.mod

@@ -1,11 +1,8 @@
 # compiler and options
 include ../../include/Makefile
-CC = g++
-FC = gfortran
-FFLAGS  = -ffixed-line-length-none -ffloat-store\
-           -w -m64 -mcmodel=medium
-includes = -I../../include $(path_to_eigen)
-
+F77FLAGS  = -ffixed-line-length-none -ffloat-store\
+           -w -m64 -mcmodel=medium -rdynamic
+includes = -I../../include $(EIGEN_INC)
 # c scripts
 src = SurfaceWave.cpp 
 
@@ -21,17 +18,16 @@ f77obj=$(f77src:%.f=%.o)
 main:$(cppobj) $(f90obj) $(f77obj)
 
 %.o:%.f90
-	$(FC) -g -c $< -o $@  $(opt) -fopenmp
+	$(FC) $(FFLAGS) -g -c $< -o $@  -fopenmp
 
 %.o:%.cpp
-	$(CC) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp 
+	$(CC) -g -c $(CXXFLAGS) $(includes)  $< -o $@  -fopenmp 
 
 surfdisp.o:surfdisp.cpp
-	$(CC) -g -c $(cppstd) $(includes)  $< -o $@ $(opt)
+	$(CC) -g -c $(CXXFLAGS) $(includes)  $< -o $@ 
 
 %.o:%.f
-	$(FC) $(FFLAGS) -g -rdynamic -c $< -o $@ $(opt)	
-
+	$(FC) $(F77FLAGS) $(FFLAGS)  -g  -c $< -o $@
 
 clean:
 	rm  *.o *.mod

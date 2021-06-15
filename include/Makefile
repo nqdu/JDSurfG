@@ -1,5 +1,11 @@
-opt=-O3 -march=native
-path_to_eigen=-I/home/dunanqiao/software/eigen-3.3.8
-path_to_gsl_lib =$(shell gsl-config --libs)
-path_to_gsl_include = $(shell gsl-config --cflags)
-cppstd=-std=c++11
+# compiler and FLAGS
+CC = g++ 
+FC = gfortran 
+CXXFLAGS = -std=c++11 -O3 -march=native
+FFLAGS = -O3 -march=native
+
+# library path
+EIGEN_INC = -I/home/dunanqiao/software/eigen-3.3.9
+GSL_LIB = $(shell gsl-config --libs)
+GSL_INC = $(shell gsl-config --cflags)
+

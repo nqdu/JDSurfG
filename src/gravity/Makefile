@@ -3,25 +3,23 @@ out = mkmat
 # compiler and options
 include ../../include/Makefile
 
-cc = g++
-includes = -I../../include
-gsl_lib = $(path_to_gsl_lib)
+includes = -I../../include $(EIGEN_INC)
 utils=../utils
 
 # c scripts
-src = $(shell find *.cpp) $(utils)/spherical.cpp  $(utils)/gauleg.cpp
+src = $(shell find *.cpp) $(utils)/spherical.cpp  $(utils)/gauleg.cpp $(utils)/IOFunction.cpp
 # objective
 cppobj = $(src:%.cpp=%.o)
 
 $(out):  $(cppobj)
-	$(cc)  -o ../../bin/$(out) $(cppobj)  -fopenmp $(gsl_lib)
+	$(CC)  -o ../../bin/$(out) $(cppobj)  -fopenmp $(GSL_LIB)
 
 gravmat.o:gravmat.cpp
-	$(cc) -g -c $(cppstd) $(includes)  $< -o $@ $(opt) -fopenmp
+	$(CC) -g -c $(CXXFLAGS) $(includes)  $< -o $@ -fopenmp
 %.o: %.cpp
-	$(cc) -g -c $(cppstd) $(includes) $< -o $@ $(opt)
+	$(CC) -g -c $(CXXFLAGS) $(includes) $< -o $@
 
 %.o: %.f90
-	gfortran -g -c $< -o $@ $(opt)
+	$(FC) -g -c $(FFLAGS) $< -o $@
 clean:
 	rm  *.o 
