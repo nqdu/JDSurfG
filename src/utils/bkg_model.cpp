@@ -84,7 +84,7 @@ void MOD3d::add_regularization(csr_matrix<float> &smat,float weight)
 {
     // get parameters required
     int n = (nx-2) * (ny -2) * (nz  - 1); // model dimension
-    int nar = smat.nonzeros - n * 7; // nonzeros excluding smooth term
+    unsigned int nar = smat.nonzeros - n * 7; // nonzeros excluding smooth term
     int m = smat.rows() - n; // data dimension
 
     int count = 0;

@@ -53,10 +53,10 @@ class SurfTime
     Eigen::VectorXd tRc,tRg,tLc,tLg; // period vector for each mode
     Eigen::VectorXf obst; // observations
     Eigen::VectorXf sta_dist;
+    std::vector<StationPair> Pairs;
 
     public:
-    int sublayer;
-    std::vector<StationPair> Pairs;
+    int sublayer,num_threads;
 
     private:
     void DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::MatrixXd &pv);

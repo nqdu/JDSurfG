@@ -4,27 +4,28 @@
 #include"tomography.hpp"
 using Eigen::VectorXf;
 using Eigen::Tensor;
+using std::string;
 
 void print_mean_and_rms(const VectorXf &a,std::string info,float weight1=0.0,float weight2=0.0)
 {
     float mean = a.mean();
-    float rms = a.array().pow(2.).mean() - mean * mean;
+    float rms = a.array().pow(2.).mean();
     rms = sqrt(rms);
     std::cout << info << " " << mean << " " << rms << std::endl;
 }
 
 int main(int argc, char* argv[]){
     // check input parameters
-    std::string paramfile,modfile,surfdata,modtrue;
-    std::string gravmat,gravdata,refmod;
-    std::cout << "\n";
-    std::cout << "\t Joint Inversion of Direct Surface Wave Tomography and Gravity" << std::endl;
-    std::cout<<std::endl;
+    string paramfile,modfile,surfdata,modtrue;
+    string gravmat,gravdata,refmod;
+    printf("\n***************************************************************\n");
+    std::cout << "*** Joint Inversion of Surface Wave Travel Time and Gravity ***" << std::endl;
+    printf("***************************************************************\n");
     if(argc == 1 ){
         std::cout <<"NO INPUT FILES ARE given!, now use the default ones ..."<<std::endl;
         paramfile="JointSG.in"; 
         modfile="MOD.surf";
-        surfdata="surfdataSC.new.dat";
+        surfdata="surfdataSC.dat";
         modtrue="MOD.true";
         gravmat="gravmat.dat";
         gravdata="gravity_obs.dat";
@@ -50,14 +51,14 @@ int main(int argc, char* argv[]){
     }
     else if(argc == 2 && !strcmp(argv[1],"-h")){
         std::cout <<"Please run this executable file by:"<<std::endl;
-        std::string info = "./this paramfile surfdatafile ";
+        string info = "./this paramfile surfdatafile ";
         info += "gravdatafile gravmat initmod (refmod) (truemod)"; 
         std::cout <<info << std::endl;
-        exit(0);
+        exit(1);
     }
     else{
         std::cout <<"Please run this executable file -h for help"<<std::endl;
-        exit(0);
+        exit(1);
     }
     std::cout <<std::endl;
 
@@ -86,7 +87,7 @@ int main(int argc, char* argv[]){
 
    // save initial model
     int nx = tomo.mod.nx, ny = tomo.mod.ny,nz=tomo.mod.nz;
-    std::string resfile="results/joint_mod_iter"+ std::to_string(0) +  ".dat";
+    string resfile="results/joint_mod_iter"+ std::to_string(0) +  ".dat";
     outfile.open(resfile);
     for(int k=0;k<nz;k++){
     for(int j=0;j<ny;j++){
@@ -96,15 +97,17 @@ int main(int argc, char* argv[]){
     }}}
     outfile.close();
 
-    // remove mean of gravity data
+    // remove mean of gravity data if needed
     Eigen::Map<VectorXf> Gr(tomo.obsg.Gr,tomo.obsg.np);
-    float mean = Gr.sum() / tomo.obsg.np;
-    Gr.array() -= mean;
-    
+    if(tomo.param.remove_average){ // remove average value if needed
+        float mean = Gr.sum() / tomo.obsg.np;
+        Gr.array() -= mean;
+    }
+
     // inversion begin
     int nt = tomo.surf.num_data;
     int ng = tomo.obsg.np;
-    std::string info;
+    string info;
     for(int iter =0;iter < tomo.param.maxiter;iter++){
         std::cout << std::endl;
         std::cout << "Iteration " + std::to_string(iter+1) << std::endl;
@@ -124,17 +127,20 @@ int main(int argc, char* argv[]){
         print_mean_and_rms(res.segment(nt,ng),info);
 
         // for joint residuals
+        res.segment(0,nt) *= sqrt(tomo.param.p / nt) / tomo.param.weight1;
+        res.segment(nt,ng) *= sqrt(tomo.param.p / ng) / tomo.param.weight2;
         info="mean and rms of joint residuals before this iteration:";
         print_mean_and_rms(res,info);
 
         // save current synthetics
-        std::string resfile = "results/res_surf"+std ::to_string(iter)+".dat";
+        string resfile = "results/res_surf"+std ::to_string(iter)+".dat";
         tomo.surf.write_disper(dsyn,resfile);
 
         resfile = "results/res_grav"+std ::to_string(iter)+".dat";
         outfile.open(resfile);
         for(int i=0;i<ng;i++){
-            outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " <<Gr(i) << " "<< dg(i) <<std::endl;
+            outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " 
+                    <<Gr(i) << " "<< dg(i) <<std::endl;
         }
         outfile.close();
 
@@ -152,10 +158,12 @@ int main(int argc, char* argv[]){
 
     // compute theoretical traveltimes for last iteration
     std::cout <<std::endl;
-    std::cout << "synthetic traveltime for the result model " << std::endl;
+    std::cout << "Synthesizing data for the final model " << std::endl;
     tomo.forward(vsf,dsyn,dg);
-    mean = dg.sum() / dg.size();
-    dg.array() -= mean;
+    if(tomo.param.remove_average){
+        float mean = dg.sum() / dg.size();
+        dg.array() -= mean;
+    }
 
     // compute mean and rms of residuals
     VectorXf res(tomo.num_data);
@@ -170,6 +178,8 @@ int main(int argc, char* argv[]){
     print_mean_and_rms(res.segment(nt,ng),info);
 
     // for joint residuals
+    res.segment(0,nt) *= sqrt(tomo.param.p / nt) / tomo.param.weight1;
+    res.segment(nt,ng) *= sqrt(tomo.param.p / ng) / tomo.param.weight2;
     info="mean and rms of joint residuals after inversion:";
     print_mean_and_rms(res,info);
     std::cout << std::endl;
@@ -182,7 +192,8 @@ int main(int argc, char* argv[]){
     resfile = "results/res_grav"+std ::to_string(maxiter)+".dat";
     outfile.open(resfile);
     for(int i=0;i<ng;i++){
-        outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " <<    Gr(i) << " "<< dg(i) <<std::endl;
+        outfile << tomo.obsg.lon[i] << " " << tomo.obsg.lat[i] << " " 
+                << Gr(i) << " "<< dg(i) <<std::endl;
     }
     outfile.close();
 

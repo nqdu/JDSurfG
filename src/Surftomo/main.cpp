@@ -6,7 +6,7 @@ using Eigen::VectorXf;
 void print_mean_and_rms(const VectorXf &a,std::string info)
 {
     float mean = a.mean();
-    float rms = a.array().pow(2.).mean() - mean * mean;
+    float rms = a.array().pow(2.).mean();
     rms = sqrt(rms);
     std::cout << info << " " << mean << " " << rms << std::endl;
 }
@@ -14,15 +14,15 @@ void print_mean_and_rms(const VectorXf &a,std::string info)
 int main(int argc, char* argv[]){
    // check input parameters
     std::string paramfile,modfile,datafile,modtrue;
-    std::cout << "\n";
-    std::cout << "\t Direct Surface Wave Tomography" << std::endl;
-    std::cout<<std::endl;
+    printf("\n**************************************\n");
+    printf("*** Direct Surface Wave Tomography ***\n");
+    printf("**************************************\n");
     if(argc == 1 ){
         std::cout <<"NO INPUT FILES ARE given!, now use the default ones ..."<<std::endl;
-        paramfile="ex/DSurfTomo.in"; 
-        modfile="ex/MOD";
-        datafile="ex/surfdataTB.dat";
-        modtrue="ex/MOD.true";
+        paramfile="DSurfTomo.in"; 
+        modfile="MOD";
+        datafile="surfdataTB.dat";
+        modtrue="MOD.true";
         std::cout <<"default files are: "<<paramfile << " " << datafile
                   << " " << modfile <<" " << modtrue <<std::endl;
     }

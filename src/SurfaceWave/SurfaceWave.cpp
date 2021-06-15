@@ -2,7 +2,7 @@
 #include"SurfaceWave.hpp"
 #include"utils.hpp"
 #include"surfdisp.hpp"
-#include"openmp.hpp"
+#include<omp.h>
 #include<fstream>
 using Eigen::Tensor;
 using Eigen::MatrixXd;
@@ -365,6 +365,7 @@ void SurfTime ::DipersionMap(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::Matrix
     }}}
 
     // compute dispersion map
+    int nthreads = this->num_threads;
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs0,vmap0,mod)
     for(int n=0;n<nx*ny;n++){
@@ -412,6 +413,7 @@ void SurfTime:: SurfWaveKernel(MOD3d &mod,Tensor<float,3> &vs,
     // compute frechet kernel and dispersion map
     MatrixXd vmap0(nt,nx*ny);
     Tensor<double,3> kernel0(nz,nt,nx*ny);
+    int nthreads = this->num_threads;
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs0,vmap0,mod,kernel0)
     for(int n=0;n<nx*ny;n++){
@@ -463,7 +465,8 @@ void SurfTime :: TravelTime(MOD3d &mod,Eigen::Tensor<float,3> &vs,Eigen::VectorX
     DipersionMap(mod,vs,pv);
 
     // get traveltime for every source-receiver pair
-    int np = Pairs.size();;
+    int np = Pairs.size();
+    int nthreads = this->num_threads;
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs,pv,mod,data)
     for(int n=0;n<np;n++){
@@ -508,6 +511,7 @@ SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
     int flag= system(cmd.c_str()); // mkdir
     
     // parallelization
+    int nthreads = this->num_threads;
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(vs,pv,mod,data,kernel)
     for(int nn=0;nn<nthreads;nn++){
@@ -536,7 +540,7 @@ SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
             // loop around all receivers
             int counter = p.counter;
             for(int i=0;i<nr;i++){
-                int nar = (frechet.col(i).array().abs()>0).cast<int>().sum();
+                int nar = (frechet.col(i).array().abs()>0.0).cast<int>().sum();
                 nonzeros(counter) = nar;
                 fprintf(fp,"# %d %d\n",counter,nar);
                 for(int j=0;j<n;j++){
@@ -557,13 +561,15 @@ SurfTime :: FrechetKernel(MOD3d &mod,Tensor<float,3> &vs,VectorXf &data,
 void SurfTime::
 read_Frechet_Kernel(std::string &basedir,csr_matrix<float> &smat)
 {
+    int nthreads = this->num_threads;
+    const int MAX_LEN = 100;
     omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(smat)
     for(int p=0;p<nthreads;p++){
         std::string filename = basedir + "/" +  std::to_string(p) + ".txt";
 
         // open file
-        char line[100];
+        char line[MAX_LEN];
         FILE *fp;
         if((fp=fopen(filename.c_str(),"r"))==NULL){
             std::cout << "cannot open file "<< filename << std::endl;
@@ -584,7 +590,7 @@ read_Frechet_Kernel(std::string &basedir,csr_matrix<float> &smat)
             }
 
             for(int i=start;i<end;i++){
-                int ierr =fscanf(fp,"%d%f\n",smat.indices + i,smat.data + i);
+                assert(fscanf(fp,"%d%f\n",smat.indices + i,smat.data + i) == 2);
             }
         }
 
@@ -602,7 +608,7 @@ write_disper(Eigen::VectorXf &dsyn,std::string &filename){
     // output
     int c = 0; // counter
     const double rad2deg = 180. / M_PI;
-    for(int n=0;n<Pairs.size();n++){
+    for(unsigned int n=0;n<Pairs.size();n++){
         StationPair &p = Pairs[n];
         float elat = (M_PI * 0.5 - p.srcx) * rad2deg, elon = p.srcz * rad2deg;
         float T;

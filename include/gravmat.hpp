@@ -6,15 +6,16 @@
 class OBSSphGraRandom{
     public:
     int   np;     //=== number of observation grids in x, y, directions ===
-	float  z0;	//=== observation elevation
-    float  *lon, *lat; //=== observation lon/lat
+	//float  z0;	//=== observation elevation
+    float  *lon, *lat,*z0; //=== observation lon/lat/elevation
 
 	float *Gr; //=== Observered gravtiy in radial direction.
 
     int  israd; //=== Flag for lon/lat (ISRAD=0) or lonrad/colatrad/r (ISRAD=1)====
 
     ~OBSSphGraRandom(){
-        delete[] Gr; delete[] lon; delete[] lat;
+        delete[] Gr; delete[] lon; 
+        delete[] lat; delete[] z0;
     }
 
     void chancoor(int flag);
@@ -39,9 +40,9 @@ class MOD3DSphGra{
     }
 
     void chancoor(int flag);
-    void read_model(std::string &paramfile,std::string &modinfile);
+    int read_model(std::string &paramfile,std::string &modinfile);
 };
 
 void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,csr_matrix<float> &smat);
 void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    csr_matrix<float> &smat);
+                    csr_matrix<float> &smat,int nthreads);
