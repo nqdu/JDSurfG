@@ -53,9 +53,9 @@ double  geocen2geogralat(double hlat)
 double compute_length(double colatErad, double lonErad, double RE, 
                     double colatSrad, double lonSrad, double RS )
 {
-    double R = 6371.0;
+    //double R = 6371.0;
     double PIhalf = 0.5 * pi;
-    double Lates, Lones, Res, rep, d2;
+    double Lates, Lones, Res, rep;
     double latErad, latSrad;
     double length;
 
