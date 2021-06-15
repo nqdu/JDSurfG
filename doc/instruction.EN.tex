@@ -3,167 +3,271 @@
 \usepackage{setspace}
 \usepackage{caption}
 \usepackage{graphicx, subfig}
-\usepackage{indentfirst}
+%\usepackage{noindent}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{enumerate}
-\usepackage[colorlinks,linkcolor=blue]{hyperref}
+\usepackage[colorlinks,linkcolor=blue,citecolor=blue]{hyperref}
+% biblio
+\usepackage[authoryear]{natbib}
 
 \lstset{
-    basicstyle          =   \sffamily,          % code style
-    keywordstyle        =   \bfseries,          % keyword 风格
-    commentstyle        =   \rmfamily\itshape,  % style of comments
-    stringstyle         =   \ttfamily,  % style of strings
+    basicstyle   =   \sffamily,          % code style
+    keywordstyle =   \bfseries,          % keyword 
+    commentstyle =   \rmfamily\itshape,  % style of comments
+    stringstyle  =   \ttfamily,  % style of strings
     flexiblecolumns,                % 
-    numbers             =   left,   % location of line number
-    showspaces          =   false,  % 
-    numberstyle         =   \tiny \ttfamily,    
-    showstringspaces    =   false,
+    numbers      =   left,   % location of line number
+    showspaces   =   false,  % 
+    numberstyle  =   \tiny \ttfamily,    
+    showstringspaces  =   false,
     captionpos          =   t,     
     frame               =   lrtb,   % frame
 }
 
-\title{Manual of JDSurfG}
-\author{Nanqiao Du}
+\title{\textbf{Manual of JDSurfG}}
+\author{Nanqiao Du \\ Version 3.0}
 \date{\today}
 
+\setlength{\listparindent}{0pt}
 \begin{document}
-   \maketitle
-   \tableofcontents
-   \newpage
-   \section{Introduction}
-   This document describes how to use JDSurfG package to perform 3-D joint inversion of 
-   shear wave velocity in crust and upper mantle. This package, containing three modules, are 
-   used to compute gravity matrix in spherical coordinates, to conduct direct surface wave 
-   tomography, and to perform tomographic joint inversion of dispersion and gravity data 
-   respectively. This kind of joint inversion is based on one-step surface wave 
-   inversion to compute 3-D (pseudo) sensitivity kernel of surface waves, and the adaptive 
-   Gauss-Legendre integration method is utilized to handle the gravity part. Based on 
-   empirical relations between seismic velocity and density of rocks, this package would be 
-   a useful tool to investigate 3-D shear wave structure in the crust and upper mantle.\\
+\maketitle
+\tableofcontents
+\newpage
 
-   This package is written by \verb!C++! and \verb!Fortran!. \verb!C++! is responsible for the main logic such as 
-   handling I/O, providing useful data structures and also, computing 1-D surface 
-   wave frechet kernel. And the \verb!Fortran! part, derived from Hongjian Fang's 
-   \href{https://github.com/HongjianFang/DSurfTomo/tree/stable/src}{DSurfTomo} package 
-   with several modifications (mainly by adding parallel mode), 
-   is used to compute surface wave traveltimes and corresponding
-   2-D sensitivity kernels.\\
 
-   I should note that this package was only tested by a small part of people on similar computational
-   conditions, so it might contain some bugs in it. I'd appreciate to receive bug reportings 
-   and modify some part of it if good suggestions. In the long term, I would add some new functions 
-   to this package, you could see the TODO LIST in README.
+\section{Introduction}
+This document describes how to use \texttt{JDSurfG} package 
+to perform 3-D joint inversion of shear wave velocity
+in crust and upper mantle by surface wave dispersion and
+gravity anomaly data. This package is consisted of three
+independent modules: generating gravity matrix in spherical
+coordinates, conducting direct surface wave tomographic 
+inversion, and performing tomographic joint inversion of 
+dispersion and gravity anomaly data. In joint inversion, we
+utilize direct surface wave tomography method \citep{Fang2015}
+to compute 3-D (pseudo) sensitivity kernel of surface waves
+traveltime, and the adaptive Gauss-Legendre integration 
+method \citep{RN35} is adopted to calculate the gravity 
+forward matrix. Based on empirical relations between seismic
+velocity and density of rocks \citep{Brocher05}, this 
+package would be a useful tool to investigate 3-D shear 
+wave structure in the crust and upper mantle. For more details, 
+please refer to the paper \citep{Du2021} \\
 
-   \section{Preliminaries}
-   This package utilizes \verb!C++!  library \href{http://eigen.tuxfamily.org/index.php?title=Main_Page}{Eigen}
-   to handle multi-dimensional arrays, and \href{http://www.gnu.org/software/gsl/}{GSL} to compute 
-   Gauss-Legendre nodes and weights. So you need to install these two libraries in your own 
-   computers before compiling this package. Also, you should make sure that your \verb!C++! compiler 
-   support \verb!C++-11! standards (gcc >= 4.8).
+This package is written by \texttt{C++} and \texttt{Fortran}.
+\texttt{C++} is responsible for the main logic such as 
+handling I/O, providing useful data structures and 
+interfaces. And the \texttt{Fortran} part, derived from 
+package \href{https://github.com/HongjianFang/DSurfTomo/tree/stable/src}{DSurfTomo}
+with several important modifications (by adding 
+parallel mode and analytical derivatives), is used to 
+compute surface wave traveltimes and corresponding 1D/3D 
+sensitivity kernels.\\
 
-   \section{Installation}
-   After you finish downloading the .zip file from Github, you can unzip it by using:
-    \begin{lstlisting}[language=bash]
+I should note that this package was only tested by 
+several people on similar computational conditions, 
+so it might contain some bugs in it. I'd appreciate 
+to receive bug reportings and modify some part of 
+it when obtaining good suggestions. In the long term, 
+I would add some new functions to this package, 
+you could see the \texttt{TODO LIST} in \texttt{README}.
+
+\section{Preliminaries}
+This package utilizes \texttt{C++} library \href{http://eigen.tuxfamily.org/index.php?title=Main_Page}{Eigen}
+to handle multi-dimensional arrays, and \href{http://www.gnu.org/software/gsl/}{GSL}
+to compute Gauss-Legendre nodes' locations and weights. So you need 
+to install these two libraries in your own computer before
+compiling this package. Also, because some of this package
+depend on template expressions, you should make sure
+that your \texttt{C++} compiler support \texttt{C++11}
+standards (\texttt{GCC} >= 4.8).
+
+\section{Installation}
+After you have downloaded the .zip file from Github,
+you can unzip it by using:
+\begin{lstlisting}[language=bash]
     unzip JDSurfG.zip
-    \end{lstlisting}
-   Before preceding to compile this package, you should add the Include path of Eigen and GSL 
-   and the Library path of GSL in \verb!JDSurfG/include/Makefile! if you don't modify your 
-   \verb!~/.bashrc! when you install these two libraies. For example:
-   \begin{lstlisting}[language=c]
-    path_to_eigen= -I/path-to-eigen
-    \end{lstlisting}
-    For GSL library, a convinient way is to use \verb!gsl-config! in the \verb!bin!
-    directory in the GSL Installation path:
-    \begin{lstlisting}[language=c]
-        path_to_gsl_lib =$(shell gsl-config --libs)
-        path_to_gsl_include = $(shell gsl-config --cflags)
-    \end{lstlisting}
-
-    Then compile this package by:
-    \begin{lstlisting}[language=bash]
-        cd JDSurfG
-        make
-    \end{lstlisting}
-    Finally you will find three excecutable files in the directory \verb!bin/!
-    \begin{lstlisting}[language=bash]
-        mkmat DSurfTomo JointSG syngrav  
-     \end{lstlisting}
-    
-     \section{Direct Surface Wave Tomography Module}
-     This module need 3 (4 if checkerboard or other test is required) input files:
-     \begin{itemize}
-        \item \verb!DSurfTomo.in!: contains information of input model, dispersion data and inversion parameters.
-        \item \verb!surfdataSC.dat!: dispersion data for each station pair
-        \item \verb!MOD!: Initial model
-        \item \verb!MOD.true!: True model (if additional tests are required )
-    \end{itemize}
-    There are some points to note before we precede to the format of each file:
-    \begin{enumerate}[(1)]
-         \item Input model is homogeneous in latitudinal and longitudinal direction, but 
-                the grid size could vary in depth direction.
-        \item The input model should be slightly larger than the inversion one in order to 
-              perform B-Spline smoothing for forward computation. To be specific,
-              if we need to invert model in region $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$, 
-              we should edit your input model at least in region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1+dz)$.
-         \item Stations should be far away from invert model boundaries, or some warning will be given 
-              when you running this package. This is to avoid that surface wave train travels 
-                along the boundaries.
-    \end{enumerate}
-    Now there are the formats of every file below:
-    \subsection{Parameter File}
-    The parameter file is called \verb!DSurfTomo.in! in this instruction. It is a self-explanatory file.
-    Here is a template of file below: \\
-    \\
-    \\
-\begin{lstlisting}[language=c]
-33 36 25      c: nx ny nz (grid number in lat lon and depth direction)
-35.3 99.7     c: goxd gozd (upper left point,[lat,lon])
-0.3 0.3       c: dvxd dvzd (grid interval in lat and lon direction)
-10.0 2        c: weight damp
-3             c: sublayers (computing depth kernel, 2~5)
-2.0 4.7       c: minimum velocity, maximum velocity
-10            c: maximum iteration
-10            c: kmaxRc (followed by periods)
-4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 
-10            c: kmaxRg (followed by periods)
-4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 
-0             c: kmaxLc (followed by periods)
-0             c: kmaxLg (followed by periods)
-1             c: synthetic flag(0:real data,1:synthetic)
-0.02          c: noiselevel
 \end{lstlisting}
-    \begin{enumerate}
-        \item [line 1] grid points in \textbf{latitude},\textbf{longitude}
-                    and in \textbf{depth}
-        \item[line 2] lat and lon in upper left point (Note this is the upper left point of input 
-                    model instead of the inversion one!)
-        \item[line 3] grid interval in lat and lon direction 
-        \item[line 4] 2-th order Tikhonov regularization parameter and damping factor(0 or a small number for damping).
-        \item[line 5] change grid-based model to layer-based model, insert sublayer layers between 
-                      adjacent grids. Usually 3 is enough. 
-        \item[line 6] minimum and maximum velocity permitted in inversion.
-        \item[line 7] maximum iteration
-        \item[line 8] no. of Rayleigh wave phase velocity disperion period used.
-        \item[line 9] if the number in line 8 isn't zero, then list all the periods. If not,
-                      list Rayleigh wave group velocity periods, and then Love phase, Love group.
-        \item[line ?] conduct checkerboard test? if so, set it to 1.
-        \item[line ?]  noiselevel, the relative amplitude of noise。
-        \[   
-            d^i = d_{syn}^i +  noiselevel * N(0,1)
-         \]
-    \end{enumerate}
+Before preceding to compile this package, you should 
+add the Include path of \texttt{Eigen} and \texttt{GSL} 
+and the Library path of \texttt{GSL} in 
+\texttt{JDSurfG/include/Makefile} if you don't modify your 
+\textasciitilde \texttt{/.bashrc} when you install these
+two libraies. For \texttt{Eigen}, you could add include path
+as
+\begin{lstlisting}[language=bash]
+    EIGEN_INC = -I/path/to/your/eigen
+\end{lstlisting}
+For \texttt{GSL} library, a convinient way is to 
+use \texttt{gsl-config} in the \texttt{bin}
+directory in the \texttt{GSL} Installation path:
+\begin{lstlisting}[language=c]
+    GSL_LIB = $(shell gsl-config --libs)
+    GSL_INC = $(shell gsl-config --cflags)
+\end{lstlisting}
 
-    \subsection{Initial Model and True Model File}
-    The initial and True model are called \verb!MOD! and \verb!MOD.true! respectively in this instruction.\\
-    These is only minor difference between these two files, where the first line of \verb!MOD!
-     are depth of every grid nodes in depth direction. And this line don't exist in \verb!MOD.true!.\\
+Then compile this package by:
+\begin{lstlisting}[language=bash]
+    cd JDSurfG
+    make
+\end{lstlisting}
+Then you will find four excecutable files in the 
+directory \texttt{bin}:
+\begin{lstlisting}[language=bash]
+    mkmat DSurfTomo JointSG syngrav  
+\end{lstlisting}
+That means you have finished installation. \\
 
-    The subsequent lines of \verb!MOD! are shear wave velocities. If we store the velocity with the 
-    format V(nz,nlon,nlat)(Row-major,where V(0,0,0) is the shear-wave velocity of the 
-    top left point at 0 km, and V(nz-1,nlon-1,nlat-1) is the velocity of 
-    lower right point at dep(nz-1) km), then it should be print to MOD as following:
-    \begin{lstlisting}[language=c++]
+\section{Direct Surface Wave Tomography Module} 
+This module need 3 (4 if checkerboard or other test 
+is required) input files:
+\begin{itemize}
+\item \verb!DSurfTomo.in!: contains information of 
+        input model, dispersion data and inversion 
+        parameters.
+\item \verb!surfdataSC.dat!: dispersion data for 
+            each station pair
+\item \verb!MOD!: Initial model
+\item \verb!MOD.true!: True model (if 
+                        additional tests are required )
+\end{itemize}
+There are some points to note before we precede to the 
+format of each file:
+\begin{enumerate}[(1)]
+    \item Input model is homogeneous in latitudinal and 
+            longitudinal direction, but the grid size 
+            could vary in depth direction.
+    \item The input model should be slightly larger than
+          the target one in order to perform \texttt{B-Spline}
+          smoothing for forward computation. To be specific,
+         if our target model is in region 
+         $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$, 
+        you should edit your input model at least in 
+        region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1+dz)$.
+    \item Stations should be far away from target model 
+            boundaries, or some warnings will be given 
+            when you running this package. This is to 
+            avoid that surface wave train travels along
+            the models' boundaries.
+\end{enumerate}
+Now there are the formats of every file below:
+\subsection{Parameter File} \label{DSurfTomo}
+The parameter file is called \texttt{DSurfTomo.in}
+in this instruction. It is a self-explanatory file.
+Here is a template of this file below:
+\\
+\begin{lstlisting}
+################################
+# DSurfTomo Program Parameters 
+################################
+
+# input model description:
+33 36 25       # nlat nlon nz (no. of points in lat lon and depth direction)
+35.3 99.7      # lat0 lon0 (upper left point,[lat,lon], in degree)
+0.3 0.3        # dlat dlon (grid interval(degree) in lat and lon direction)
+
+# dispersion forward/adjoint computation parameters
+# Insert 'ninsert' points in the grid-based model 
+# to compute dispersion curves
+3              # ninsert (insert several layers, 2~5)
+8              # no.of threads used 
+
+# inversion parameters
+20.0 1.0       # smooth damp
+2.0 4.7        # minimum velocity, maximum velocity (a priori information)
+10             # maximum iteration
+2              # no. of threads used in Linear System Solver
+
+# dispersion data description 
+16             # kmaxRc (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0
+16             # kmaxRg (followed by periods)
+4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0
+0              # kmaxLc (followed by periods)
+0              # kmaxLg (followed by periods)
+
+# synthetic test
+1              # synthetic flag(0:real data,1:synthetic)
+3.5            # noise level, std value of gaussian noise
+    
+\end{lstlisting}
+When you run this program, it will automatically skip
+all the empty lines and comments (denoted by '\#'). So you 
+could modify this file (by adding your own comments) as long 
+as you don't change the order of these parameters. Now let's
+see the meaning of each parameter in the template file.
+
+\begin{enumerate}
+    \item \texttt{Input Model Description Block}. This block 
+    contains information of input model. The first line contains 
+    three integers which denote the number of grid points
+    in latitude,longitude,and in 
+    depth respectively. The second line denotes coordinates 
+    of the origin point (NorthWest point), in degree. The last 
+    line denotes the grid interval in latitudinal and 
+    longitudinal direction, both in degree.
+    
+    \item \texttt{Forward/Adjoint Computation Block}. This 
+    block contains parameters for forward/adjoint computation.
+    The first line is an integer we call it "ninsert". 
+    As metioned above, we use grid nodes to parameterize 
+    our model and thus all physical parameters are defined directly 
+    at grid points. However, in order to compute surface wave 
+    dispersion by Thomas-Haskell Matrix Method \citep{Haskell53,schwab1972},
+    we need to convert grid-based model to layer-based one. In that 
+    case, we insert 'ninsert' points between adjacent points to do 
+    that conversion. The next integer is how many threads you 
+    want to use in calculation of dispersion curves and do 
+    ray tracing with Fast Marching Method \citep{rawlinson2004}. 
+
+    \item \texttt{Inverse Parameters Block}. This block contains 
+    all parameters used in the inverse problem. The first line indicates 
+    the smoothing and damping factor in solving the linear systems.
+    Then the followed line is the restriction of your  
+    inverted model (the minimum and maximum velocity). The next line 
+    is an integer which is the maximum iterations you want to iterate. The
+    last line is the number of threads used in solving linear 
+    systems, usually 2 is enough.
+    
+    \item \texttt{Dispersion Data Block}. This block describes 
+    the information of your dispersion data. The first line is 
+    the number of periods your Rayleigh wave phase velocity
+    disperion data spans. If this number is not zero, then you 
+    should write all the periods in the next line. Other lines 
+    are for Rayleigh group dispersion, Love phase, and Love group 
+    respectively.
+
+    \item \texttt{Synthetic Test Blcok}. This block contains all 
+    parameters used in synthetic test. The first one is a flag variable
+    to denote whether you will conduct synthetic test when using this 
+    program. The next line is the noiselevel of gaussian noise, 
+    defined as below:
+    \[   
+        d_{obs}^i = d_{syn}^i +  noiselevel * N(0,1)
+    \]
+
+\end{enumerate}
+
+\subsection{Initial Model and True Model File}
+\texttt{Please Note that the format of MOD.true in current version 
+is different from previous versions!} \\ 
+
+The initial and true model are called \verb!MOD! 
+and \verb!MOD.true! respectively in this instruction. 
+They are used for initial input model, 
+and for synthetic test dataset (like in checkerboard test). 
+The format of these two files are listed below: \\
+
+The first line of each files are depths (in km) of each grid points,
+i.e. there would be \texttt{nz} numbers in this line. 
+The subsequent lines of \verb!MOD! are shear wave velocities.
+If we store the velocity with the format V(nz,nlon,nlat)
+(Row-major,where $V(0,0,0)$ is the shear-wave velocity of the 
+\texttt{top NorthWest} point at \texttt{dep(0)} km, and V(nz-1,nlon-1,nlat-1) is 
+the velocity of \texttt{bottom SouthEast} point at dep(nz-1) km), then it 
+should be print to MOD as following:
+\begin{lstlisting}[language=c++]
 //c++
 for(int i=0;i<nz;i++){
 for(int j=0;j<nlon;j++){
@@ -172,223 +276,383 @@ for(int j=0;j<nlon;j++){
     }
     fprintf(fileptr,"\n");
 }} 
-  \end{lstlisting}
-
-  \subsection{Dispersion Data File}
-  This dispersion data in \verb!example/! is surfdataSC.dat,which contains dispersions (distance/traveltime) 
-  obtained from cross-correlation of long-time noise signals of 2 stations. \\
-   Here we list its first 9 lines:\\
-   \verb!#!  31.962600 108.646000 1 2 0\\
-    33.732800 105.764100 3.0840\\
-    34.342500 106.020600 3.1154\\
-    33.357400 104.991700 3.0484\\
-    33.356800 106.139500 3.0820\\
-    34.128300 107.817000 3.1250\\
-    33.229300 106.800200 3.0575\\
-    \verb!#! 29.905000 107.232500 1 2 0\\
-    34.020000 102.060100 2.7532\\
-
-    It is obvious that this file contains 2 kind of stations: surface wave emitting 
-    station (with \verb!#! before each line) and receiver station (without \verb!#! in each line). \\
-    For a emitting station, the format of this line is:\\
-    \begin{center}
-        \verb!#! lat lon period-index wavetype velotype:
-    \end{center}
-
-    \begin{itemize}
-        \item wavetype: the type of surface wave, for Rayleigh it is 2,and 1 for Love wave.
-        \item velotype: velocity type, 0 for phase velocity and 1 for group velocity.
-        \item period-index: The period index number.
-    \end{itemize}
-    For example, if we use dispersion for Rayleigh phase velocity 
-    at periods 4s,5s,6s,7s,and this line contains information only at 5s, then the last 3 numbers 
-    are 2,2,0.\\
-
-    Then the following lines contain all the receiver station who you have successfully extracted
-    signals from at this period, this wave type and this velocity type. And the format of each line 
-    is:
-    \begin{center}
-        latitude longitude obs-velocity.
-    \end{center} 
-    
-
-    \subsection{Run This Module}
-    After you prepare all these required files in a folder, then you could enter into this folder,
-    and print in your shell:
-    \begin{lstlisting}[language=bash]
-    ./DSurfTomo -h
-    \end{lstlisting}
-    Then you could type in all required files according to the order on the screen.
-
-    \subsection{Output Files}\label{surface wave output files}
-    This module will output 2 folders: \verb!kernel/! and \verb!results/!. In \verb!kernel/!, there are 3-D pseudo sensitivity kenrels, and \verb!results/! contains 
-    all the models after every iteration. Here are information about the format of these files:
-
-    \begin{itemize}
-    \item \verb!kernel/!: 3-D pseudo sensitivity kernel. The number of txt files is 
-    equal to no. of threads used in your program (see \ref{number of threads}), and start from 0.
-    The kernel matrix is Compressed Sparse Row matrix. It looks like:\\
-    \# 0 1283\\
-    24292 2.18522\\
-    24293 2.10063\\
-    24322 2.29456\\
-    24323 2.90529\\
-    24324 2.77207\\
-    24353 2.45755\\
-    24354 3.14743\\
-    24355 2.99618\\
-    24384 2.14853\\
-    where the number followed '\#' is the row-index, and another one is no. of nonzeros
-    in this row (1283 for current case). Then the following (1283) rows
-    are column-index and values. It should be noted that this folder is only a temporary folder 
-    in the inversion process, and now we delete it for concise.
-
-    \item \verb!results/!:contains models (\verb!mod_iter*!)
-                        and surface wave travel time (\verb!res*.dat!) of each iteration. The format 
-                        of model files is: lon lat depth S-wave, and the format of 
-                        traveltime file is: interstation distance, observed-traveltime,
-                        synthetic-traveltime, lat1, lon1, lat2, lon2, period, wavetype.
-    \end{itemize}
-
-    \section{Joint Inversion Module}
-    This module need 4-6 files in total:
-    \begin{itemize}
-        \item \verb!JointSG.in!: contains information of input model, dispersion data and inversion parameters.
-        \item \verb!surfdataSC.dat!: surface wave dispersion data
-        \item \verb!obsgrav.dat!: Gravity anomaly dataset
-        \item \verb!gravmat.dat!: sensitivity kernel of gravity to density
-        \item \verb!MOD!: Initial mode.
-        \item \verb!MOD.true!: Checkerboard model.
-        \item MOD.ref : Gravity reference model, used for compute gravity anomaly.
-    \end{itemize}
-    Here are the formats of each file.
-
-    \subsection{Parameter File}
-    The difference between \verb!JointSG.in! and \verb!DSurfTomo.in! is little except
-    last two lines.\\
-
-
-    In order to know how it works, here I list the cost function of joint inversion:
-    \[
-        L = \frac{p}{N_1 \sigma_1^2} (d_1- d_1^o)^2 + 
-            \frac{1-p}{N_2 \sigma_2^2} (d_2- d_2^o)^2 \tag{1}
-    \]
-    \begin{itemize}
-        \item last but two line: parameter p, which is in [0,1],p=0 is equivalent to 
-                                inversion by gravity only, and, respectively, p=1 means 
-                                inversion by surface wave.
-        \item last line: $\sigma$ for surface wave and gravity, respectively.
-    \end{itemize}
-
-    \subsection{Gravity Data File}
-    The format of this file is quite simple, just print all the gravity data to this file.
-    Each line of it contains the longitude,latitude and gravity anomaly at this point. \\
-
-    Here I list the first 9 lines of this file to give you an example:\\
-    100.000000 35.000000 -224.206921!\\
-    100.000000 34.950000 -224.110699\\
-    100.000000 34.900000 -241.774731\\
-    100.000000 34.850000 -240.245968\\
-    100.000000 34.800000 -234.187542\\
-    100.000000 34.750000 -246.670605\\
-    100.000000 34.700000 -238.575939\\
-    100.000000 34.650000 -241.357250\\
-    100.000000 34.600000 -260.059429\\
-
-    \subsection{Gravity Matrix File}
-    This file is generated by gravity module (refer to 6-th chapter).
-
-    \subsection{Gravity Reference Model File}
-    Based on the definition of gravity anomaly, it is the perturbance according 
-    to a normal elliptoid. Thus we need to convert it to local anomalies in our research 
-    area. In fact, we remove the average value of oberserved anomalies. In each iteration, 
-    there are 3 steps to compute relative anomalies:
-    \begin{itemize}
-        \item Compute density distribution of current S-wave model and reference model (through
-            empirical relations).
-        \item Compute density anomaly, then utilize gravity matrix to get gravity anomalies.
-        \item Remove average value of the results of previous step.
-    \end{itemize}
-    This model could be a user self-defined model, and you could also use the 
-    default one (the average of initial model in every depth.)
-
-    \subsection{Run This Module}
-    After you prepare all these required files in a folder, then you could enter into this folder,
-    and print in your shell:
-    \begin{lstlisting}[language=bash]
-    ./JointSG -h
-    \end{lstlisting}
-    Then you could type in all required files according to the order on the screen.
-
-    \subsection{Output Files}
-    This module will output 2 folders: \verb!kernel/! and \verb!results/!. \\
-
-    The format of \verb!kernel/! is the same as the files in \ref{surface wave output files}.
-    In the folder \verb!results/!, it contains models (\verb!joint_mod_iter*!), 
-    surface wave travel time (\verb!res_surf*.dat!) and graivty anomaly (\verb!res_grav*.dat!) 
-    of each iteration. The format of gravity anomaly is:
-    \begin{center}
-        lon lat observed-anomalies synthetic-anomalies
-    \end{center}
-
-    \section{Gravity Module}
-    This module requires 3 input files:
-    \begin{itemize}
-        \item \verb!JointSG.in! or \verb!DSurfTomo.in!: contains model information
-        \item MOD(and MOD.true) : Initial model and true model.
-        \item obsgrav.dat: contains coordinates of each obeservation points.
-    \end{itemize}
-    These formats have been illustrated in previous chapters.
-
-    \subsection{Run This Module}
-    After you prepare all these required files in a folder, then you could enter into this folder,
-    and print in your shell:
-    \begin{lstlisting}[language=bash]
-    ./mkmodel -h
-    \end{lstlisting}
-    Then you could type in all required files according to the order on the screen.
-
-    \subsection{Output Files}
-    This module output only one file: \verb!gravmat.dat!. This is the density kernel 
-    for gravity anomaly. It is also a Compressed Sparse Matrix, the format of it is the 
-    same as surface wave kernel in \ref{surface wave output files}.
-
-    \section{Advanced Options}
-    \subsection{Number of Threads used in Parallel Mode}\label{number of threads}
-    There are one line in \verb!include/openmp.hpp!:
-    \begin{lstlisting}[language=c++]
-    #define nthread 4
-    \end{lstlisting}
-    Change 4 to other number according to your computation environment.
-
-    \subsection{Empirical Relations}
-    in \verb!src/utils/empirical.f90! 
-\begin{lstlisting}[language=fortran]
-subroutine empirical_relation(vsz,vpz,&
-    rhoz)bind(c,name="empirical_relation")
-    use,intrinsic :: iso_c_binding
-    
-    real(c_float), intent(in) ::  vsz
-    real(c_float),intent(out) ::vpz,rhoz
-    
-    vpz=0.9409 + 2.0947*vsz - 0.8206*vsz**2+ &
-            0.2683*vsz**3 - 0.0251*vsz**4
-    rhoz=1.6612*vpz- 0.4721*vpz**2 + &
-            0.0671*vpz**3 - 0.0043*vpz**4 + & 
-            0.000106*vpz**5
-    
-end subroutine empirical_relation
 \end{lstlisting}
-    You could change this relation according to your conditions. And if you want to conduct
-    Joint inversion, please remember to change the derivative function in the same file.
 
-    \subsection{Number of Gauss-Legendre Nodes and the Sparcity of Gravity Matrix}
-    In \verb!src/gravity/gravmat.cpp!, you could modify the max and min number of nodes,
-    and the maximum distance beyond which gravity matrix is zero (The attraction between two 
-    points is negligible if beyond this distance)
-    \begin{lstlisting}[language=c++]
-    #define NMIN 5
-    #define NMAX 256
-    #define maxdis 100.0 
-    \end{lstlisting}
+\subsection{Dispersion Data File}
+This dispersion data in \verb!example/! is surfdataSC.dat,
+which contains dispersions (distance/traveltime) obtained
+surface wave or cross-correlation functions\\
+Here we list its first 9 lines:\\
+\verb!#!  31.962600 108.646000 1 2 0\\
+33.732800 105.764100 3.0840\\
+34.342500 106.020600 3.1154\\
+33.357400 104.991700 3.0484\\
+33.356800 106.139500 3.0820\\
+34.128300 107.817000 3.1250\\
+33.229300 106.800200 3.0575\\
+\verb!#! 29.905000 107.232500 1 2 0\\
+34.020000 102.060100 2.7532\\
+
+Obviously, this file contains two kinds of infomation:
+surface wave source or master station (lines begin with
+\verb!#!) and receiver stations (without \verb!#! in each
+line). For a source or master station, the format of 
+this line is:\\
+\begin{center}
+    \verb!#! \texttt{latitude longitude period-index wavetype
+     velotype}
+\end{center}
+
+\begin{itemize}
+    \item \texttt{wavetype}: the type of surface wave, for 
+                            Rayleigh it is 2, and it is 1 for Love wave.
+    \item \texttt{velotype}: velocity type, 0 for phase velocity
+                            and 1 for group velocity.
+    \item \texttt{period-index}: The period index number.
+\end{itemize}
+For example, if in our dataset, the dispersion periods 
+for Rayleigh phase velocity is at periods 4s,5s,6s,7s, 
+and this line contains information only at 5s, then 
+the last 3 numbers 
+are \texttt{2,2,0}.\\
+
+Then the following lines contain all the receiver stations
+that you have successfully extracted dispersion curves
+at this period, this wave type and this velocity type.
+And the format of each line is:
+\begin{center}
+    \texttt{latitude longitude velocity}
+\end{center} 
+
+
+\subsection{Run This Module}
+After you have prepared all the required files in a folder,
+then you could enter into this folder,and run this command
+in your shell:
+\begin{lstlisting}[language=bash]
+./DSurfTomo -h
+\end{lstlisting}
+Then you could type in all required files according to the 
+order on the screen.
+
+\subsection{Output Files}\label{surface wave output files}
+This module will output two (temporary) folders: \verb!kernel/! 
+and \verb!results/!. \texttt{kernel} is a tempoaray folder ,
+and it contains 3-D pseudo sensitivity kenrels of surface wave
+travel times. \verb!results/! contains all the intermediate models 
+after each iteration. Here are information about the format
+of these files:
+
+\begin{itemize}
+\item \verb!kernel/!: 3-D pseudo sensitivity kernel. The number of
+txt files is equal to no. of threads used in your program 
+(see \ref{DSurfTomo}), and start from 0.
+The kernel matrix is Compressed Sparse Row matrix. It looks like:
+\begin{lstlisting}
+# 0 1283
+24292 2.18522
+24293 2.10063
+24322 2.29456
+24323 2.90529
+24324 2.77207
+24353 2.45755
+24354 3.14743
+24355 2.99618
+24384 2.14853
+\end{lstlisting}
+
+Note there are two numbers followed '\#'. The first one is the 
+row-index, and another one is the no. of nonzeros in this row
+(1283 for current case). Then the following (1283) rows
+are column-index and matrix elements. It should be noted that 
+this folder is only a temporary folder in the inversion process,
+and if will be deleted after each iteration.
+
+\item \verb!results/!:contains models (\verb!mod_iter*!)
+and surface wave travel time (\verb!res*.dat!) of each iteration.
+The format of model files is:
+\begin{center}
+    \texttt{longitude latitude depth Vs},   
+\end{center}
+And the format of traveltime file is (9 columns): 
+\begin{center}
+    \small{\texttt{distance observation synthetic lat1 lon1 lat2 lon2 
+    period wavetype}}.
+\end{center}
+
+\end{itemize}
+
+\section{Joint Inversion Module}
+This module needs 4-6 files in total:
+\begin{itemize}
+    \item \verb!JointSG.in!: contains information of input model,
+            dispersion data and inversion parameters.
+    \item \verb!surfdataSC.dat!: surface wave dispersion data.
+    \item \verb!obsgrav.dat!: Gravity anomaly dataset.
+    \item \verb!gravmat.dat!: sensitivity kernel of 
+                gravity to density.
+    \item \verb!MOD!: Initial model.
+    \item \verb!MOD.true!: checkerboard model.
+    \item \texttt{MOD.ref}: gravity reference model, used 
+            for compute gravity anomaly.
+\end{itemize}
+Here are the formats of each file.
+
+\subsection{Parameter File}
+The difference between \verb!JointSG.in! and \verb!DSurfTomo.in! 
+is little except last three blocks:
+\begin{lstlisting}
+# synthetic test 
+1             # synthetic flag(0:real data,1:synthetic)
+3.5 0.05      # noiselevel for traveltime and Bourguer
+
+# weight parameter 
+0.5           # parameter p (Julia(2000)) for 2 datasets, 0-1
+3.5 0.05      # std parameters for two datasets 
+
+# gravity processing
+# whether to remove average value of synthetic gravity data    
+0             # 1 remove, 0 not remove 
+\end{lstlisting}
+
+In order to know the meaning of each parameter in \texttt{
+Weight Parameters Block}, 
+here I list the weighted cost function of joint inverse 
+problem \citep{Julia2000}:
+\[
+    L = \frac{p}{N_1 \sigma_1^2}\sum_{i=1}^{N_1} (d_{1,i}- 
+        d_{1,i}^o)^2 +   
+        \frac{1-p}{N_2 \sigma_2^2} \sum_{i=1}^{N_2}
+        (d_{2,i}- d_{2,i}^o)^2 \tag{1}
+\]
+where $\mathbf{d}_{1,2}$ is the data vector for each dataset. $N_{1,2}$
+is the size of each dataset and $\sigma_{1,2}$ is the corresponding
+errors. $p$ is a parameter in the range [0,1] to control the contribution
+of each dataset manually. \\
+
+The additional \texttt{gravity processing block} contains only one integer. 
+When this integer is equal to 1, the program will automatically 
+remove the average value of observed and synthetic gravity data. 
+This option is applied to remove large-scale density anomalies 
+in the deep mantle. For more details please refer to \ref{Gravref}.
+
+\subsection{Gravity Data File}
+The format of this file is quite simple, just print all 
+the gravity data to this file. Each line of it contains 
+the longitude,latitude and gravity anomaly at this point. \\
+
+Here I list the first 9 lines of this file to give you
+an example:\\
+100.000000 35.000000 -224.206921\\
+100.000000 34.950000 -224.110699\\
+100.000000 34.900000 -241.774731\\
+100.000000 34.850000 -240.245968\\
+100.000000 34.800000 -234.187542\\
+100.000000 34.750000 -246.670605\\
+100.000000 34.700000 -238.575939\\
+100.000000 34.650000 -241.357250\\
+100.000000 34.600000 -260.059429\\
+
+\subsection{Gravity Matrix File}
+This file is generated by gravity module, please refer to 
+chapter \ref{Gravity Matrix}.
+
+\subsection{Gravity Reference Model File}\label{Gravref}
+Based on the definition of gravity anomaly, it reflects the 
+density perturbance according to a normal elliptoid. Thus we need 
+to convert the absolute anomalies to local anomalies in our research 
+area. Before inversion, we will remove the average value of 
+oberserved anomalies. So in the real data 
+invesion, there are 3 steps to compute relative anomalies:
+\begin{itemize}
+    \item Compute density distribution of 
+        current S-wave model and reference model (through
+        empirical relations).
+    \item Compute density anomaly, then utilize gravity matrix
+          to get gravity anomalies.
+    \item Remove average value of the synthetic anomaly data.
+\end{itemize}
+This model could be a user self-defined model, and you could also use the 
+default one (the average of initial model in every depth). Please 
+remember, when you are tackling real data, to set the integer to 1 in the gravity processing block 
+in \texttt{JointSG.in} file. 
+
+\subsection{Run This Module}
+After you have prepared all these required files in a folder, 
+then you could enter into this folder, and run this command 
+in your shell:
+\begin{lstlisting}[language=bash]
+./JointSG -h
+\end{lstlisting}
+Then you could type in all required files according to the 
+order on the screen.
+
+\subsection{Output Files}
+This module will output two temporary folders: 
+\verb!kernel/! and \verb!results/!. \\
+
+The format of \verb!kernel/! is the same as the files
+in \ref{surface wave output files}. In the folder \verb!results/!,
+it contains models (\verb!joint_mod_iter*!), 
+surface wave travel time (\verb!res_surf*.dat!) and 
+graivty anomaly (\verb!res_grav*.dat!) 
+of each iteration. The format of gravity anomaly is:
+\begin{center}
+    \texttt{lon lat observed-anomalies synthetic-anomalies}
+\end{center}
+
+\section{Gravity Module}
+This module requires three input files:
+\begin{itemize}
+    \item \verb!JointSG.in! or \verb!DSurfTomo.in!: contains model information
+    \item \texttt{MOD} : only first line of it are needed.
+    \item \texttt{obsgrav.dat}: contains coordinates of each 
+                     obeservation points.
+\end{itemize}
+These formats have been illustrated in previous chapters.
+
+\subsection{Run This Module}
+After you prepare all these required files in a folder,
+then you could enter into this folder,and print in your shell:
+\begin{lstlisting}[language=bash]
+./mkmat -h
+\end{lstlisting}
+Then you could type in all required files according to 
+the order on the screen.
+
+\subsection{Output Files}\label{Gravity Matrix}
+This module output only one file: \verb!gravmat.dat!. 
+This is the density kernel for gravity anomaly. It is also
+a Compressed Sparse Row Matrix, the format of it is the same
+as surface wave kernel in \ref{surface wave output files}.
+
+\section{Advanced Options}
+
+\subsection{Gauss-Legendre Quadrature and 
+the Sparcity of Gravity Matrix}
+In \verb!src/gravity/gravmat.cpp!, you could modify the 
+max and min order of Gauss-Legendre Quadrature,
+and the maximum distance beyond which gravity matrix is zero (The attraction between two 
+points is negligible if beyond this distance)
+\begin{lstlisting}
+const int NMIN=3,NMAX=256;
+const float maxdis = 100.0;
+\end{lstlisting}
+Also, because we use a preallocated memory to store gravity matrix 
+in the program, you should make sure this memory is large enough. If 
+your memory is small, this program will complain and stop with
+infomation like \texttt{"Please increase the sparse ratio!"}. In fact,
+the size of the memory (bytes) used is from:
+\[
+    Mem = sparse * m * n * 4 
+\]
+Where \texttt{m} is the number of observed gravity data, 
+\texttt{n} is the total size of your 
+model, and \texttt{sparse} is the sparse ratio of the gravity matrix.
+To change that memory used, you should modify this line in 
+\texttt{src/gravity/gravmat.cpp}:
+\begin{lstlisting}
+const float sparse = 0.2;
+\end{lstlisting}
+where sparse should be a floating number between 0 and 1. Note that 
+this number is dependent on the \texttt{maxdis} in the same file.
+After you change (one of ) these parameters, please remember
+to recompile this program. 
+
+\subsection{Empirical Relations}
+Empirical relations are utilized to connect density and 
+velocity of rocks in our program. If you have better relations 
+in your research area, you could change this relation 
+in \verb!src/utils/bkg_model.cpp! 
+\begin{lstlisting}[language=c++]
+void MOD3d:: 
+empirical_relation(float vsz,float &vpz,float &rhoz)
+{
+    vpz = 0.9409 + 2.0947*vsz - 0.8206*pow(vsz,2)+ 
+            0.2683*pow(vsz,3) - 0.0251*pow(vsz,4);
+    rhoz = 1.6612 * vpz - 0.4721 * pow(vpz,2) + 
+            0.0671 * pow(vpz,3) - 0.0043 * pow(vpz,4) + 
+            0.000106 * pow(vpz,5);
+}
+\end{lstlisting}
+And if you want to conduct joint inversion, please remember to
+change the derivative function in the same file.
+
+\subsection{Random Seed}
+In our program, to make sure the generated random number the same
+in each independent numerical experiments, we fix the random seed
+in \texttt{src/utils/gaussian.cpp}:
+\begin{lstlisting}[language=c++]
+static default_random_engine e(11);
+\end{lstlisting}
+You could change 11 to other integer if required.
+
+\section{Tips and Tools}
+\subsection{Warnings}
+In fact, \texttt{DSurfTomo} and \texttt{JointSG} are all dependent 
+on two modules. First one is the forward computation of dispersion 
+curves from 1-D model, and another one is the ray-tracing on 
+2-D spherical surface. There would be some possible errors in these 
+two modules due to incompatible input model format, terrible initial 
+model, and even the inappropriate location of your stations. To tackle possible 
+problems, the two modules will print some information on the screen 
+or in a output file to help you debug.
+
+The first possible warning is \texttt{"WARNING:improper initial value in 
+disper-no zero found"} on the screen. Then a \texttt{fort.66} file will 
+be generated in the running directory. This error is due to 
+a strange 1-D model that the dispersion module cannot find 
+dispersion curves for this model. There are some possible reasons for 
+this warning. If you find this problem for the first iteration,
+this problem may from that the format of your initial model 
+is different from the required one. You could check the model in 
+file \texttt{fort.66} and compare that with your model. 
+Another possible reason is that you take inappropriate 
+Tickonov regulariztion parameters (i.e. damping and smooth factors)
+which lead to abrupt change of previous model.
+
+The second warning is \texttt{"Source lies outside bounds 
+of model (lat,long)="}.
+This reason is caused by that the receivers are too close to 
+the boundary of the current model that ray paths are along 
+this boundary. If this warning happens, please enlarge your 
+model to avoid this problem.
+
+\subsection{L-curve Analysis}
+Usually L-curve analysis is applied to determine the best 
+suitable smoothing and damping factor for a inverse problem. In our 
+numerical experiment, we find that the damping factor affects the 
+final result smaller than smoothing factor. So we \texttt{recommend}
+you to keep the damping factor to a small value (such as 0.001) during 
+your inversion, and only tune the smoothing factor. 
+
+
+In the folder \texttt{utils/}, we have prepared two scripts to help 
+you tune the smoothing factor. The first one is a bash script 
+\texttt{\text{tune\_L\_curve.sh}}
+that will generate a series of inversion results in the folder 
+\texttt{storage/}. Please read 
+this script carefully and then try your own examples.
+
+The second python script \texttt{utils/lcurve.py} will help you 
+generate a L-curve based on your results. Before running 
+this script, please change all the 
+required parameters in the function \texttt{main()}.  
+
+\subsection{Checkpoint Restart}
+Sometimes you want to start from one of the results (like mod\_iter5.dat)
+instead of the initial model. We prepared a python script
+\texttt{utils/out2init.py}, you could run this script like this 
+\begin{lstlisting}
+python out2init.py mod_iter5.dat MOD05 
+\end{lstlisting}
+Then this script will convert the output model to the format 
+of the initial model. This script will be useful in joint inversion.
+And also, it may help you restart from some checkpoint if some issues 
+happend.
+
+
+% biblio GJI
+\bibliographystyle{abbrvnat}
+\bibliography{bibliography}
 \end{document}
