@@ -1,5 +1,5 @@
 # Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
-Version 3.1. Update from version 3.0. Version 3.0+ is about **5-10 times faster** than previous versions!
+Version 3.2. Update from version 3.0. Version 3.0+ is about **5-10 times faster** than previous versions!
 
 ## Note
 Please note that the format of the input files are a little different from previous versions!
@@ -11,6 +11,7 @@ Please note that the format of the input files are a little different from previ
 ## Updates
 * Update parameter files, docs and references.
 * Add I/O functions.
+* Add intel compiler support 
 
 ## Bug Fix
 * Fix bugs in `utils/gravity_forward.f90`
