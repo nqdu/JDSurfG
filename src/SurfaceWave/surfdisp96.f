@@ -51,6 +51,9 @@ c-----
 c     15 DEC 2019 - modified by Nanqiao Du at IGGCAS
 c       remove NP and NL restrictions
 c-----
+c     01 JAN 2023 - modified by Nanqiao Du at UofT,
+c       fix save attributes when using ifort and OpenMP 
+c       the compile option is "ifort -extend-source" 
        subroutine surfdisp96(thkm,vpm,vsm,rhom,nlayer,iflsph,iwave,
      &                       mode,igr,kmax,t,cg)bind(c,name="surfdisp96_")
         use,intrinsic :: iso_c_binding
@@ -413,7 +416,9 @@ c        parameter (NL=200)
         real*8 wvno, omega, twopi
         real*8 c1, c2, cn, cm, dc, t1, clow
         real*8 dltar, del1, del2, del1st, plmn
-        save del1st
+c        save del1st
+        common/getsol_module/ del1st 
+        !$omp threadprivate(/getsol_module/)
         integer llw,mmax
         real*4 d(mmax),a(mmax),b(mmax),rho(mmax),rtp(mmax),dtp(mmax),btp(mmax)      
 c   integer llw,mmax
@@ -516,7 +521,10 @@ c       real*4 d(NL),a(NL),b(NL),rho(NL),rtp(NL),dtp(NL),btp(NL)
 c        common/modl/ d,a,b,rho,rtp,dtp,btp
 c        common/para/ mmax,llw,twopi
         double precision z0,z1,r0,r1,dr,ar,tmp,twopi
-        save dhalf
+c        save dhalf
+        real*4 dhalf 
+        common/sphere_module/ dhalf
+        !$omp threadprivate(/sphere_module/)
         ar=6370.0d0
         dr=0.0d0
         r0=ar
