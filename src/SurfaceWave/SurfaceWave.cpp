@@ -268,7 +268,7 @@ void _Kernel1D(float *vs,float *vp,float *rho,float *dep,int nz,
             _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                         rthk,rvp,rvs,rrho,rmax,dcdbr,kvs+i*nz);
             _ParamConvert(dep,vp,vs,rho,nz,sublayer,
-                        rthk,rvp,rvs,rrho,rmax,dcdar,krho+i*nz);          
+                        rthk,rvp,rvs,rrho,rmax,dcdrr,krho+i*nz);          
         }   
     }
     if(kmaxRg > 0){
