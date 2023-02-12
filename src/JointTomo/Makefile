@@ -24,7 +24,7 @@ cppobj = $(src:%.cpp=%.o) JointTomo.o
 fobj= $(f90src:%.f90=%.o) $(f90mp:%.f90=%.o) $(f77src:%.f=%.o) 
 
 $(out): $(fobj) $(cppobj)
-	$(CC) -o ../../bin/$(out) $(fobj) $(cppobj) -lgfortran -fopenmp $(GSL_LIB)
+	$(CC) -o ../../bin/$(out) $(fobj) $(cppobj) $(LINK_CF) -fopenmp $(GSL_LIB)
 
 %.o: %.cpp
 	$(CC) $(CXXFLAGS) -g -c $(cppstd) $(includes) $< -o $@

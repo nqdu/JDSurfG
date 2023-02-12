@@ -1,7 +1,5 @@
 # compiler and options
 include ../../include/Makefile
-F77FLAGS  = -ffixed-line-length-none -ffloat-store\
-           -w -m64 -mcmodel=medium -rdynamic
 includes = -I../../include $(EIGEN_INC)
 # c scripts
 src = SurfaceWave.cpp 
@@ -27,7 +25,7 @@ surfdisp.o:surfdisp.cpp
 	$(CC) -g -c $(CXXFLAGS) $(includes)  $< -o $@ 
 
 %.o:%.f
-	$(FC) $(F77FLAGS) $(FFLAGS)  -g  -c $< -o $@
+	$(FC)  $(FFLAGS)  -g  -c $< -o $@ -fopenmp
 
 clean:
 	rm  *.o *.mod

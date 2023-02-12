@@ -22,7 +22,7 @@ cppobj = $(src:%.cpp=%.o)
 fobj= $(f90src:%.f90=%.o) $(f90mp:%.f90=%.o) $(f77src:%.f=%.o) 
 
 $(out): $(fobj) $(cppobj)
-	$(CC) -o ../../bin/$(out) $(fobj) $(cppobj) -lgfortran -fopenmp
+	$(CC) -o ../../bin/$(out) $(fobj) $(cppobj) $(LINK_CF) -fopenmp
 
 %.o: %.cpp
 	$(CC) $(CXXFLAGS) -g -c $(cppstd) $(includes) $< -o $@ $(opt)
