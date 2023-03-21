@@ -12,7 +12,7 @@ f90obj= lsmrModule_csr.o
 main: $(f90obj)  $(cppobj)
 
 lsmrModule_csr.o : lsmrModule_csr.f90
-	$(FC) -g -c $< -o $@  $(opt) -fopenmp
+	$(FC) $(FFLAGS) -g -c $< -o $@  $(opt) -fopenmp
 
 %.o:%.cpp
 	$(CC) $(CXXFLAGS) -g -c $(includes)  $< -o $@
