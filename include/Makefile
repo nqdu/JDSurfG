@@ -9,8 +9,8 @@ LINK_CF = -lgfortran
 #intel
 # CC = icc 
 # FC = ifort
-# CXXFLAGS = -std=c++11 -O3 -xHost -extend-source
-# FFLAGS = -O3 -xHost 
+# CXXFLAGS = -std=c++11 -O3 -xHost 
+# FFLAGS = -O3 -xHost -extend-source
 # LINK_CF = -lifcore
 
 # library path
