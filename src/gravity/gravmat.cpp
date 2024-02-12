@@ -3,13 +3,16 @@
  * Written by Zhiwei Li at Dec. 2011
  * Modified by Nanqiao Du by adding parallel module and coordinate format matrix
 */
-#include"utils.hpp"
-#include"gravmat.hpp"
-#include"IOFunction.hpp"
+#include"gravity/gravity_module.hpp"
 #include<fstream>
-#include<stdlib.h>
-#include<math.h>
-#include<omp.h>
+#include<cmath>
+#include <assert.h>
+#include "shared/parallel.hpp"
+#include "gravity/transform.hpp"
+#include "gravity/gauleg.hpp"
+#include "shared/IOFunc.hpp"
+#include "shared/csr_matrix.hpp"
+
 const double  degrad2 = M_PI/180.0;
 const double  hpi2 =  M_PI*0.5;
 const float  rearth2=6371.0;
@@ -26,7 +29,6 @@ const int NSCALE = 5;
 const double MINDISKM = 0.5;
 const float maxdis = 100.0;// maximum distance between 2 points 
 const float ftol = 1.0e-6;
-const float sparse = 0.2; // sparse ratio of gravity matrix
 
 void OBSSphGraRandom :: chancoor(int flag)
 {
@@ -54,17 +56,20 @@ void OBSSphGraRandom :: chancoor(int flag)
     }
 }
 
-void OBSSphGraRandom :: read_obs_data(std::string &filename)
+void OBSSphGraRandom :: read_obs_data(const std::string &filename)
 {
     FILE *fp;
-    std::string line;
+    char line[256];
     np = 0;
-
-    // get lines of this file
-    FILE *pin;
-    assert((pin=popen(("wc -l " + filename).c_str(), "r"))!=NULL);
-    assert(fscanf(pin,"%d",&np) == 1);
-    pclose(pin);
+    fp = fopen(filename.c_str(),"r");
+    if(fp == NULL) {
+        printf("cannot open %s\n",filename.c_str());
+        exit(1);
+    }
+    while(fgets(line,sizeof(line),fp)) {
+        np += 1;
+    }
+    fclose(fp);
 
     assert((fp=fopen(filename.c_str(),"r")) != NULL);
     lon = new float [np];
@@ -77,6 +82,8 @@ void OBSSphGraRandom :: read_obs_data(std::string &filename)
         assert(fscanf(fp,"%f%f%f",lon+i,lat+i,Gr+i) == 3);
     }
     fclose(fp);
+
+    printf("\nGravity Data: %d points\n",np);
 }
 
 void MOD3DSphGra :: chancoor(int flag)
@@ -121,24 +128,32 @@ void MOD3DSphGra :: chancoor(int flag)
 	}
 }
 
-int MOD3DSphGra :: read_model(std::string &paramfile,std::string &modfile)
+void MOD3DSphGra :: 
+read_model(const std::string &modfile)
 {
-    std::ifstream fp;
+    FILE *fp;
     int i;
     float ulx,uly,dx,dy;
-    std::string line;
+    char line[512];
 
     // read parameter file
-    fp.open(paramfile);
-    skipread(fp,line,"%d%d%d",&ny,&nx,&nz);
+    if((fp = fopen(modfile.c_str(),"r")) == NULL) {
+        printf("cannot open %s\n",modfile.c_str());
+        exit(1);
+    }
+
+    assert(fgets(line,sizeof(line),fp) != NULL);
+    sscanf(line,"%d%d%d",&ny,&nx,&nz);
     nx=nx-2;
     ny=ny-2;
     nz=nz-1;
     lon = new float[nx];
     lat = new float[ny];
     dep = new float[nz];
-    skipread(fp,line,"%f%f",&uly,&ulx);
-    skipread(fp,line,"%f%f",&dy,&dx);
+    assert(fgets(line,sizeof(line),fp) != NULL);
+    sscanf(line,"%f%f",&uly,&ulx);
+    assert(fgets(line,sizeof(line),fp) != NULL);
+    sscanf(line,"%f%f",&dy,&dx);
 
     // remove boundaries
     ulx=ulx+dx;
@@ -150,22 +165,28 @@ int MOD3DSphGra :: read_model(std::string &paramfile,std::string &modfile)
     for(i=0;i<ny;i++)
         lat[i]=uly-i*dy;
 
-    // read no. of threads used
-    int num_threads;
-    skipread(fp,line);
-    skipread(fp,line,"%d",&num_threads);
-
-    fp.close();
     israd = 0;
 
-    // read depth of velomodel
-    fp.open(modfile);
-    for(i=0;i<nz;i++){
-        fp >> dep[i];
-    }
-    fp.close();
+    // print model information
+    printf("Model Description:\n");
+    printf("===================================\n");
+    printf("model origin: latitude,longitude\n");
+    printf("   %g   %g\n",uly,ulx);
+    printf("model grid spacing: dlat,dlon\n");
+    printf("   %g   %g\n",dy,dx);
+    printf("model dimension: nlat,nlon,nz\n");
+    printf("%5d %5d %5d\n",ny,nx,nz);
 
-    return num_threads;
+    // read depth of velomodel
+    assert(fgets(line,sizeof(line),fp) != NULL);
+    char *starp = line,*endp = NULL;
+    for(int i = 0; i < nz; i ++) {
+        dep[i] = std::strtof(starp,&endp);
+        starp = endp;
+    }
+
+    // close file
+    fclose(fp);
 }
 
 
@@ -224,8 +245,7 @@ void GravityR(double ro,double lonrado,double colatrado,
     Using the adaptive scheme according the distance from the source to the observation point.
 */
 void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
-                     double colatrado,int *col,float *value,int *nar,
-                     const int nonzeros)
+                     double colatrado,int *col,float *value,int &nar)
 {
     double  gr;
     double  rs1, lonrads1, colatrads1, rs2, lonrads2, colatrads2;
@@ -258,6 +278,7 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
     ny = mod3dsphgra.ny;
     nz = mod3dsphgra.nz;
 
+    nar = 0;
     for( k=(nz-1); k>=0; k-- ){//===from bottom to top==
     for( i=0; i<nx; i++ ){
     for( j=0; j<ny; j++ ){
@@ -354,13 +375,9 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
                 Gr += wgl*gr;
             }}}
             if(Gr > ftol){
-                if(*nar + 1 > nonzeros){
-                    printf("please increase sparse ratio!\n");
-                    exit(1);
-                }
-                value[*nar] = Gr;
-                col[*nar] = n;
-                (*nar) += 1;
+                value[nar] = Gr;
+                col[nar] = n;
+                nar += 1;
             }
         }
     }}}
@@ -369,99 +386,63 @@ void gravmat_one_row(MOD3DSphGra &mod3dsphgra, double ro, double lonrado,
 
 /*
     Given Random Observation System. Only Compute matrix of gravity in Radial direction.
-*/
-void gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,csr_matrix<float> &smat)
-{
-    double   ro, lonrado, colatrado;
-    int     i;
-    int     np,nar,nar1;
-    int     *col;
-    int nx ,ny,nz;
-
-    // extract parameters
-    np  = ObsSphGra.np;
-    //ro = ObsSphGra.z0;
-    nar = 0;
-    nar1 = 0;
-    nx = mod3dsphgra.nx;
-    ny = mod3dsphgra.ny;
-    nz = mod3dsphgra.nz;
-
-    // arrays to store all the corresponding columns
-    int nonzeros = sparse * nx * ny * nz * np;
-    smat.initialize(np,nx*ny*nz,nonzeros);
-    col = new int [nonzeros]();
-
-    for( i = 0; i < np; i++ ){
-        lonrado   = ObsSphGra.lon[i];
-        colatrado = ObsSphGra.lat[i];
-        ro = ObsSphGra.z0[i];
-        gravmat_one_row(mod3dsphgra,ro,lonrado,colatrado,col,smat.data,&nar1,nonzeros);
-        smat.indptr[i+1] = smat.indptr[i] + nar1 - nar;
-        printf("computing %d-th point: lon=%f lat=%f\n",
-              i+1,lonrado/degrad2,90.-colatrado/degrad2);
-        nar = nar1;
-    }
-
-    // copy column to indices
-    for(i = 0;i < nar;i++){
-        smat.indices[i] = col[i];
-    }
-
-    delete[] col;
-    smat.nonzeros = nar;
-}
-
-/*
-    Given Random Observation System. Only Compute matrix of gravity in Radial direction.
     openmp is used.
 */
-void gravmat_parallel(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
-                    csr_matrix<float> &smat,int nthreads)
+void generate_gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
+                      const std::string &outfile)
 {
-    int     i, j;
-    int     np,nar,m;
-
+    int np,m;
     np  = ObsSphGra.np;
     m = mod3dsphgra.nx * mod3dsphgra.ny * mod3dsphgra.nz;
 
-    // allocate sparse matrix for every data
-    int *col,*nars;
-    float *data;
-    int ncol = (int)(m * sparse);
-    int nonzeros = ncol * np;
-    smat.initialize(np,m,nonzeros); 
+    // get num threads
+    int nprocs{};
+    #pragma omp parallel
+    {
+        nprocs = omp_get_num_threads();
+    }
 
-    col = new int [nonzeros]();
-    data = new float[nonzeros]();
-    nars = new int [np]();
-
-    omp_set_num_threads(nthreads);
     #pragma omp parallel for shared(ObsSphGra,mod3dsphgra)
-    for(i=0;i<np;i++){
-        double lonrado   = ObsSphGra.lon[i];
-        double colatrado = ObsSphGra.lat[i];
-        double ro = ObsSphGra.z0[i];
-        gravmat_one_row(mod3dsphgra,ro,lonrado,colatrado,
-                        col+i*ncol,data+i*ncol,nars+i,nonzeros);
-        printf("computing %d-th point: lon=%f lat=%f\n",
-              i+1,lonrado/degrad2,90.-colatrado/degrad2);
-    }
-    nar = 0; 
+    for(int myrank = 0; myrank < nprocs; myrank ++) {
+        // open tempory file to save gravmat 
+        std::string filename = outfile + "." + std::to_string(myrank);
+        FILE *fp = fopen(filename.c_str(),"wb");
 
-    for(i=0;i<np;i++){
-        smat.indptr[i+1] = smat.indptr[i] + nars[i];
-        for(j=0;j<nars[i];j++){
-            smat.indices[nar] = col[i*ncol+j];
-            smat.data[nar] = data[i*ncol+j];
-            nar += 1;
+        // write rows and cols of this matrix
+        fwrite(&np,sizeof(int),1,fp);
+        fwrite(&m,sizeof(int),1,fp);
+
+        int starid,endid;
+        int col[m];
+        float data[m];
+        allocate_tasks(np,nprocs,myrank,starid,endid);
+        for(int i = starid; i <= endid; i ++) {
+            double lonrado   = ObsSphGra.lon[i];
+            double colatrado = ObsSphGra.lat[i];
+            double ro = ObsSphGra.z0[i];
+            int nar;
+            gravmat_one_row(mod3dsphgra,ro,lonrado,colatrado,col,data,nar);
+            
+            if(myrank == 0) {
+                int size = endid - starid + 1;
+                float per = (i-starid+1.) / size * 100;
+                print_progressbar(per);
+                // printf("computing %d of %d point: lon=%f lat=%f\n",
+                //         i-starid+1,size,lonrado/degrad2,90.-colatrado/degrad2);
+            }
+
+            // write matrix to temporary file
+            fwrite(&i,sizeof(int),1,fp);
+            fwrite(&nar,sizeof(int),1,fp);
+            fwrite(col,sizeof(int),nar,fp);
+            fwrite(data,sizeof(float),nar,fp);
         }
+
+        // close temporary file
+        fclose(fp);
     }
-    smat.nonzeros = nar; 
 
-    delete[] col;
-    delete[] nars;
-    delete[] data;
-
+    // merge files to one big file
+    merge_csr_files(nprocs,outfile);
 }
 

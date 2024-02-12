@@ -1,31 +1,51 @@
+import numpy as np
 import sys 
-import numpy as np 
+
 def main():
-    if len(sys.argv) != 3:
-        print("please run like this:")
-        print("this.py outfile inputfile")
-        exit()
+    if len(sys.argv) !=4 :
+        print("python out2init.py outfile MOD.init MOD.out")
+        print("example: python out2init.py results/mod_iter10.dat MOD MOD.out")
+        exit(1)
+    
     infile = sys.argv[1]
-    outname = sys.argv[2]
+    refile = sys.argv[2]
+    outfile = sys.argv[3]
 
-    # load files and get z components
-    d = np.loadtxt(infile)
-    nlon = np.unique(d[:,0]).size
-    nlat = np.unique(d[:,1]).size
-    z:np.ndarray = np.unique(d[:,2])
-    nz = z.size
+    # load ref model
+    f = open(refile,"r")
+    line = f.readline()
+    info = line.split()
+    nx,ny,nz = int(info[0]),int(info[1]),int(info[2])
+    line = f.readline()
+    info = line.split()
+    lat0,lon0 = float(info[0]),float(info[1])
+    line = f.readline()
+    info = line.split()
+    dx,dy = float(info[0]),float(info[1])
+    line = f.readline()
+    info = line.split()
+    z = np.zeros((nz))
+    for i in range(nz):
+        z[i] = float(info[i])
+    f.close()
 
-    # loop to save files
-    f = open(outname,'w')
-    for i in range(nz):
-        f.write("%f "%(z[i]))
-    f.write('\n')
-    for i in range(nz):
-        for j in range(nlon):
-            for k in range(nlat):
-                idx = i * nlat * nlon + j * nlat + k
-                f.write('%f '%(d[idx,3]))
-            f.write('\n')
+    # load output model
+    d = np.loadtxt(infile)[:,3]
+    d = d.reshape(nz,ny,nx)
+
+    # write model
+    f = open(outfile,"w")
+    f.write("%d %d %d           #nlat nlon nz\n"%(nx,ny,nz))
+    f.write("%g %g          # lat0 lon0\n" %(lat0,lon0))
+    f.write("%g %g          # dlat dlon\n"%(dx,dy))
+    for iz in range(nz):
+        f.write("%g "%(z[iz]))
+    f.write("\n")
+    for iz in range(nz):
+        for iy in range(ny):
+            for ix in range(nx):
+                f.write("%g "%(d[iz,iy,ix]))
+            f.write("\n")
     f.close()
 
 if __name__ == "__main__":

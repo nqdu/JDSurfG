@@ -1,70 +1,40 @@
-#include"gravmat.hpp"
+#include "gravity_module.hpp"
 #include<fstream>
 #include<string.h>
+#include "shared/csr_matrix.hpp"
 
 int main(int argc,char *argv[]){
+
     // check input parameters
-    std::string paramfile,datafile,modfile;
-    if(argc == 1 ){
-        std::cout <<"NO INPUT FILES ARE given!, now use the default ones ..."<<std::endl;
-        paramfile="DSurfTomo.in"; 
-        datafile="obsgrav.dat";
-        modfile="MOD";
-        std::cout <<"default files are: "<<paramfile << " " << datafile
-                  << " " << modfile <<std::endl;
-    }
-    else if(argc == 4){
-        paramfile = argv[1];
-        modfile = argv[3];
+    std::string modfile,datafile;
+    if(argc == 3){
+        modfile = argv[1];
         datafile = argv[2];
     }
-    else if (argc == 2 && !strcmp(argv[1],"-h")){
-        std::cout <<"Please run this executable file by:"<<std::endl;
-        std::cout <<"./this paramfile datafile vs-model " << std::endl;
-        exit(0);
+    else {
+        printf("Please run this executable file by:\n");
+        printf("./mkmat vs-model datafile  \n");
+        printf("Example: ./mkmat MOD obsgrav.dat\n");
+        exit(1);
     }
-    else{
-        std::cout <<"Please run this executable file -h:"<<std::endl;
-        exit(0);
-    }
-    std::cout <<std::endl;
+
+    printf("\n");
     MOD3DSphGra mod;
     OBSSphGraRandom obs;
 
     // read density model and gravity data
     //mod.read_model(paramfile,modfile);
-    int num_threads = mod.read_model(paramfile,modfile);
+    mod.read_model(modfile);
     obs.read_obs_data(datafile);
-
-    // init sparse matrix
-    //int n = mod.nx * mod.ny * mod.nz;
-    //int nonzeros = (int)(0.1 * n * obs.np);
-    csr_matrix<float> smat;//(obs.np,n,nonzeros);
 
     //change coordinates
     obs.chancoor(1);
     mod.chancoor(1);
 
     // compute gravity matrix and synthetic gravity data
-    FILE *fp;
-    std::cout << "begin to compute gravity matrix" << std::endl;
-    gravmat_parallel(mod,obs,smat,num_threads); 
+    printf("\nbegin to compute gravity matrix ...\n");
+    generate_gravmat(mod,obs,"gravmat.bin");
+    printf("\n");
 
-    // save gravity matrix
-    fp = fopen("gravmat.dat","w");
-    if(fp == NULL){
-        std::cout <<"cannot open file gravmat.dat";
-        exit(0);
-    }
-    for(unsigned int i=0;i<smat.rows();i++){
-        int start = smat.indptr[i];
-        int end = smat.indptr[i+1];
-        int nar = end - start;
-        fprintf(fp,"# %d %d\n",i,nar);
-        for(int j=start;j<end;j++){
-            fprintf(fp,"%d %g\n",smat.indices[j],smat.data[j]);
-        }
-    }
-    
-    fclose(fp);
+    return 0;
 }
