@@ -327,8 +327,10 @@ end subroutine dcopy
       use,intrinsic :: iso_c_binding
       implicit         none
     ! double precision dx(*),dy(*),dtemp
-      real(dp) dx(*),dy(*),dtemp
-      integer(c_int)          i,incx,incy,ix,iy,m,n
+      integer(c_int),  intent(in)    :: n,incx,incy
+      real(dp), intent(in)    :: dx(*),dy(*)
+      real(dp) dtemp
+      integer(c_int)          i,ix,iy,m
 
       ddot = 0.0d0
       dtemp = 0.0d0
@@ -426,9 +428,12 @@ end function ddot
       use lsmrDataModule, only : dp
       use,intrinsic :: iso_c_binding
       implicit         none
-      integer(c_int)          ix,n,incx
+      integer(c_int),  intent(in)    :: n,incx
+      real(dp), intent(in)    :: x(*)
+      
+      integer(c_int)          ix
      ! double precision x(*), ssq,absxi,norm,scale
-      real(dp) x(*), ssq,absxi,norm,scale
+      real(dp) ssq,absxi,norm,scale
 
       if ( n < 1 .or. incx < 1 ) then
          norm  = 0.d0
@@ -499,16 +504,15 @@ end function dnrm2
          use,intrinsic :: iso_c_binding
       implicit none
 
+      integer(c_int),  intent(in)    :: n,incx
+      real(dp), intent(in)    :: sa
+      real(dp), intent(inout) :: x(*)
+
       integer(c_int) i
-      integer(c_int) incx
       integer(c_int) ix
       integer(c_int) m
-      integer(c_int) n
       !double precision sa
       !double precision x(*)
-
-      real(dp) sa
-      real(dp) x(*)
       if ( n <= 0 ) then
          return
       else if ( incx == 1 ) then

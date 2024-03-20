@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/mnt/c/linuxapp/eigen-3.4.0"
+                "/Users/nqdu/software/eigen-3.4.0",
+                "/opt/homebrew/Cellar/libomp/18.1.1/include"
             ],
             "defines": ["-D","SPM_FAST"],
             "compilerPath": "/usr/bin/gcc",
