@@ -4,6 +4,11 @@
 #include "shared/gaussian.hpp"
 #include "shared/smoothing.hpp"
 
+/**
+ * @brief read inverse parameters
+ * 
+ * @param paramfile parameter file
+ */
 void DSurfTomo::
 read_invparams(const std::string &paramfile)
 {
@@ -15,6 +20,12 @@ read_invparams(const std::string &paramfile)
     infile.close();
 }
 
+/**
+ * @brief read model from model file
+ * 
+ * @param modfile initial model file
+ * @param modtrue true model file, if = NONE, use the average of initial one
+ */
 void DSurfTomo ::
 read_model(const std::string &modfile,const std::string &modtrue)
 {
@@ -98,12 +109,23 @@ read_model(const std::string &modfile,const std::string &modtrue)
     }
 }
 
+/**
+ * @brief read dispersion data
+ * 
+ * @param datafile 
+ */
 void DSurfTomo:: 
 read_data(const std::string &datafile)
 {
     surf.read_swd_data(datafile);
 }
 
+/**
+ * @brief inversion for one step by using LSMR method
+ * 
+ * @param vsf current/next velocity
+ * @param dsyn synthetic data for current velocity model
+ */
 void DSurfTomo::
 inversion(fmat3 &vsf,fvec &dsyn)
 {
@@ -233,33 +255,41 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
     surf.compute_grad(vsf,dsyn,grad);
 }
 
+/**
+ * @brief smooth gradient by using gaussian smoothing algorithm
+ * 
+ * @param grad  gradient array, shape(nlat-2,nlon-2,nz-1), col major
+ */
 void DSurfTomo ::
 smoothing(fvec &grad) const
 {
     int nx = vsinit.dimension(0), ny = vsinit.dimension(1);
     int nz = vsinit.dimension(2);
 
-    // smoothing gradient if required
-    printf("smoothing ...\n");
-    if(param.smooth_in_km) {
+    // find minimum dz
+    float dz = 1000 * (dep[nz-2] - dep[0]); 
+    for(int i = 0; i < nz-2; i ++) {
+        dz = std::min(dz,dep[i+1] - dep[i]);
+    }
+
+    // create regular data
+    int nz1 = (dep[nz-2] - dep[0]) / (dz * 0.99);
+    dz = (dep[nz-2] - dep[0]) / (nz1 - 1);
+    fmat3 gradr(nx-2,ny-2,nz1);
+    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),true);
+
+    // smoothing
+    if (param.smooth_in_km) {
         float dx = std::abs(lat[1] - lat[0]);
         float dy = std::abs(lon[1] - lon[0]);
-        float dz = std::abs(dep[1] - dep[0]);
-        smooth_sph_pde(grad.data(),nx-2,ny-2,nz-1,dx,dy,dz,
-                        lat[0],lon[0],dep[0],param.sigma_h,
+        smooth_sph_pde(gradr.data(),nx-2,ny-2,nz1,dx,dy,dz,
+                        lat[1],lon[1],dep[0],param.sigma_h,
                         param.sigma_v);
     }
     else {
-        smooth_cart_pde(grad.data(),nx-2,ny-2,nz-2,param.sigma_h,param.sigma_v);
+        smooth_cart_pde(gradr.data(),nx-2,ny-2,nz1,param.sigma_h,param.sigma_v);
     }
 
-    // int ic = 0;
-    // for(int k=0;k<nz-1;k++){
-    //     float z = dep[k] + 1.0e-4;
-    //     float hessinv = std::sqrt(2. * abs(z));
-    //     for(int j=0;j<ny-2;j++){
-    //     for(int i=0;i<nx-2;i++){
-    //         grad[ic] *= hessinv;
-    //         ic += 1;
-    // }}}
+    // interpolate back
+    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),false);
 }

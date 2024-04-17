@@ -1,7 +1,7 @@
 #include "JSurfGTomo/JSurfGTomo.hpp"
 #include <fstream>
 #include "shared/IOFunc.hpp"
-//#include "nonlinear_opt.hpp"
+#include "nonlinear_opt.hpp"
 
 int main(int argc, char* argv[]){
    // check input parameters
@@ -86,6 +86,7 @@ int main(int argc, char* argv[]){
 
     // inversion begin
     std::string info;
+    NonlinOPT <JSurfGTomo> opt(outdir,param.MAX_REL_STEP,param.iter_start);
     for(int ii = 0; ii < param.maxiter;ii ++){
         int iter = ii + param.iter_cur;
         printf("\n");
@@ -94,21 +95,20 @@ int main(int argc, char* argv[]){
             tomo.inversion(vsf,dsyn);
         }
         else {
-            // NonlinOPT<JSurfGTomo> opt(outdir,param.MAX_REL_STEP,param.iter_start);
-            // std::string method = "CG";
-            // if(param.inv_method == 2) {
-            //     method = "LBFGS";
-            // }
-            // opt.update(iter,tomo,x,dsyn,method);
+            std::string method = "CG";
+            if(param.inv_method == 2) {
+                method = "LBFGS";
+            }
+            opt.update(iter,tomo,x,dsyn,method);
 
-            // // update vsf
-            // int ic = 0;
-            // for(int k=0;k<nz-1;k++){
-            // for(int j=0;j<ny-2;j++){
-            // for(int i=0;i<nx-2;i++){
-            //     vsf(i+1,j+1,k) = x[ic];
-            //     ic += 1;
-            // }}}
+            // update vsf
+            int ic = 0;
+            for(int k=0;k<nz-1;k++){
+            for(int j=0;j<ny-2;j++){
+            for(int i=0;i<nx-2;i++){
+                vsf(i+1,j+1,k) = x[ic];
+                ic += 1;
+            }}}
         }
 
         // compute mean and rms of residuals
@@ -119,6 +119,7 @@ int main(int argc, char* argv[]){
         float rms2 = std::sqrt(res2.square().sum() / m2);;
         printf("mean and rms of SWD before this iteration(s): %g %g\n",mean1,rms1);
         printf("mean and rms of Gravity before this iteration(s): %g %g\n",mean2,rms2);
+        printf("joint misfit = %g\n",tomo.compute_misfit(dsyn));
 
         // save current synthetics
         std::string resfile1 = outdir + "/res_swd"+std ::to_string(iter)+".dat";
@@ -151,6 +152,7 @@ int main(int argc, char* argv[]){
     float rms2 = std::sqrt(res2.square().sum() / m2);
     printf("mean and rms of SWD of final model: %g %g\n",mean1,rms1);
     printf("mean and rms of Gravity of final model: %g %g\n",mean2,rms2);
+    printf("joint misfit = %g\n",tomo.compute_misfit(dsyn));
 
     // save synthetics for last iteration
     int maxiter = tomo.param.maxiter + param.iter_cur;

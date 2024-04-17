@@ -2,10 +2,6 @@
 #include "numerical.hpp"
 #include <fstream>
 
-// // useful function
-// void smooth_grad(fvec &grad,int nx,int ny,int nz,float sigma_h,float sigma_v);
-// void find_quadratic_min(const float *x,const float *y,int n,float &xmin,float &ymin);
-
 
 /**
  * nonlinear operator

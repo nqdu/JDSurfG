@@ -6,7 +6,7 @@ Please note that the format of the input files are a little different from previ
 
 ## New Features
 * More accurate group velocity ray-tracing implementation in `fmst` package.
-* Add nonlinear conjugate gradient and L-BFGS optimizer for large-scale problems (Only for Surface Wave)
+* Add nonlinear conjugate gradient and L-BFGS optimizer for large-scale problems
 * High order dispersion data can be included.
 
 ## Updates

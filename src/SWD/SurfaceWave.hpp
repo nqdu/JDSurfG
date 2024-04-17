@@ -47,16 +47,16 @@ float fmst_raypath(float scx,float scz,float rcx,float rcz,float *fdm);
 
 }
 
-class StationPair
+struct StationPair
 {
-    public:
+public:
     std::string wavetype;
     int counter; // data counter
     int period_idx; // which period, 0 for minimum period used and >0 for else
     int mode; // which mode, 0 for fundamental and >=1 for higher modes
     int nr; // no. of receivers
 
-    public:
+public:
     float srcx,srcz; // source station colat and lon, in rad
     std::vector<float> rcx,rcz;// receiver station coordinates, colat and lon ,in rad
     std::vector<float> dist,obstime; // distance and traveltime

@@ -3,6 +3,7 @@
 #include "shared/gaussian.hpp"
 #include "gravity/gravity_module.hpp"
 #include "SWD/empirical.hpp"
+#include "shared/smoothing.hpp"
 
 void JSurfGTomo::
 read_invparams(const std::string &paramfile)
@@ -364,6 +365,45 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
     s2 = s2 / s1;
     s1 = 1.;
     grad = grad1 * s1 + grad2 * s2;
+}
+
+/**
+ * @brief smooth gradient by using gaussian smoothing algorithm
+ * 
+ * @param grad  gradient array, shape(nlat-2,nlon-2,nz-1), col major
+ */
+void JSurfGTomo::
+smoothing(fvec &grad) const 
+{
+    int nx = vsinit.dimension(0), ny = vsinit.dimension(1);
+    int nz = vsinit.dimension(2);
+
+    // find minimum dz
+    float dz = 1000 * (dep[nz-2] - dep[0]); 
+    for(int i = 0; i < nz-2; i ++) {
+        dz = std::min(dz,dep[i+1] - dep[i]);
+    }
+
+    // create regular data
+    int nz1 = (dep[nz-2] - dep[0]) / (dz * 0.99);
+    dz = (dep[nz-2] - dep[0]) / (nz1 - 1);
+    fmat3 gradr(nx-2,ny-2,nz1);
+    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),true);
+
+    // smoothing
+    if (param.smooth_in_km) {
+        float dx = std::abs(lat[1] - lat[0]);
+        float dy = std::abs(lon[1] - lon[0]);
+        smooth_sph_pde(gradr.data(),nx-2,ny-2,nz1,dx,dy,dz,
+                        lat[1],lon[1],dep[0],param.sigma_h,
+                        param.sigma_v);
+    }
+    else {
+        smooth_cart_pde(gradr.data(),nx-2,ny-2,nz1,param.sigma_h,param.sigma_v);
+    }
+
+    // interpolate back
+    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),false);
 }
 
 /**

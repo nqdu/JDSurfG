@@ -682,6 +682,13 @@ set_model(const fvec &dep,float goxd,float gozd,float dvxd,float dvzd)
     dlon = dvzd;
 }
 
+/**
+ * @brief compute L2 gradient at current model
+ * 
+ * @param vs current model, shape(nx,ny,nz)
+ * @param data synthetic data
+ * @param grad gradient, shape((nx-2)*(ny-2)*(nz-1))
+ */
 void SurfTime:: 
 compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
 {
@@ -766,7 +773,7 @@ compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
     for(int j=0;j<ny-2;j++){
     for(int i=0;i<nx-2;i++){
         int ic = k * (ny-2) * (nx-2) + j * (nx-2) + i;
-        grad(ic) *= vs(i+1,j+1,k);
+        grad[ic] *= vs(i+1,j+1,k);
     }}}
 }
 

@@ -6,6 +6,14 @@
 #include <fstream>
 #include <string>
 
+/**
+ * @brief compute gravity from a given model
+ * 
+ * @param vs vs model, shape(nx,ny,nz)
+ * @param vsref reference vs model, shape(nx,ny,nz)
+ * @param gmat gravity matrix, smat type
+ * @param dsyn synthetic gravity data
+ */
 static void 
 compute_gravity(const fmat3 &vs,const fmat3 &vsref,const csr_matrix &gmat,
                 fvec &dsyn)

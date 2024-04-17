@@ -49,4 +49,5 @@ public:
     float compute_misfit(const fvec &dsyn) const;
     void forward(const fvec &x,fvec &dsyn) const;
     void compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const;
+    void smoothing(fvec &grad) const;
 };

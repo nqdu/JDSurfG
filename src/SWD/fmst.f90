@@ -7,16 +7,11 @@ real,allocatable :: velnew(:,:)
 contains
 
 subroutine fmst_init(nx,ny,goxdf,gozdf,dvxdf,dvzdf) bind(C,name='fmst_init')
-  !! compute source-receivers pair traveltime
+  !! initialize fmst
   !! Input Parameters:
-  !!    nx,ny         : no. of grid nodes in lat and lon direction
-  !!    velf(nx*ny)   : dispersion map
+  !!    nx,ny         : nx,ny grid dimension for lat/lon direction
   !!    goxdf,gozdf   : upper left grid coordinates in colat/lon, in degree 
   !!    dvxdf,dvzdf   : grid interval, in degree 
-  !!    srcx,srcz     : source coordinates(colat,lon), in rad
-  !!    nr            : no of receivers
-  !!    rcx(nr),rcz(nr)     : receiver coordinates(colat,lon),in rad 
-  !!    ttime(nr)   : travel times
   use iso_c_binding, only          : c_int,c_float
   use globalp
   use traveltime
@@ -103,7 +98,8 @@ subroutine fmst_finalize() bind(c,name='fmst_finalize')
       WRITE(6,*)'Error with DEALLOCATE: PROGRAM fmmin2d: velnb'
     ENDIF
   ENDIF
-  deallocate(velv,veln,ttn,nsts,btg,STAT=checkstat,velnew)
+  deallocate(velv,veln,ttn,nsts,btg,STAT=checkstat)
+  if (allocated(velnew)) deallocate(velnew)
   IF(checkstat > 0)THEN
     WRITE(6,*)'Error with DEALLOCATE: PROGRAM fmmin2d: velnb'
   ENDIF
@@ -343,7 +339,7 @@ subroutine fmst_reset(velin) bind(c,name='fmst_reset')
   real(sp)                       :: temp(nnz,nnx)
 
   ! allocate space 
-  allocate(velnew(nnz,nnx))
+  if (.not. allocated(velnew)) allocate(velnew(nnz,nnx))
 
   temp = veln
   call gridder(velin)

@@ -57,6 +57,14 @@ static double legendre(int n,double x){
     return leg;
 }
 
+/**
+ * @brief compute gauss-legendre weights and locations between [x1,x2]
+ * 
+ * @param x1,x2 data range
+ * @param x location of GL points
+ * @param w weights
+ * @param length length(x)
+ */
 void gauleg(double x1, double x2, double *x, double *w,int length)
 {
     int n = length - 1;
