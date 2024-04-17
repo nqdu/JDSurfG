@@ -1,0 +1,4 @@
+33 36 25 # nlat,nlon,nz 
+0.3 0.3 4.0  # dlat,dlon,dz   in deg/km
+35.3 99.7 0  # upperleft lat/lon/z
+120. 6.  # sigma_h sigma_v

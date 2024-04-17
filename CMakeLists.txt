@@ -10,6 +10,9 @@ set(CMAKE_FORTRAN_COMPILER     ${FC})
 # compiler flags
 set(CMAKE_CXX_FLAGS             ${CXXFLAGS}) 
 
+# build function test
+set(BUILD_TEST                  ${BUILD_TEST})
+
 ################## dependencies ##################
 # preferred installation prefix of dependencies
 set(EIGEN_INC                 ${EIGEN_INC})
@@ -21,6 +24,7 @@ set(${var} ${val})
 endif()
 endmacro()
 setDefault(EIGEN_INC   "/mnt/c/linuxapp/eigen-3.4.0")
+setDefault(BUILD_TEST   FALSE)
 
 # project
 project(JDSurfG LANGUAGES CXX Fortran)
@@ -70,6 +74,14 @@ add_executable(mkmat ${PROJECT_SOURCE_DIR}/src/gravity/main.cpp)
 add_executable(syngrav ${PROJECT_SOURCE_DIR}/utils/syn_gravity.cpp)
 add_executable(DSurfTomo ${PROJECT_SOURCE_DIR}/src/surftomo/main.cpp)
 add_executable(JointTomo ${PROJECT_SOURCE_DIR}/src/JSurfGTomo/main.cpp)
+
+if (${BUILD_TEST}) 
+  message(STATUS "build test examples = ON ...")
+  add_executable(test_fmst ${PROJECT_SOURCE_DIR}/test/fmst_deriv/main.cpp)
+  target_link_libraries(test_fmst surftomo SWD share)
+  add_executable(test_smooth ${PROJECT_SOURCE_DIR}/test/smooth/main.cpp)
+  target_link_libraries(test_smooth share)
+endif()
 
 target_link_libraries(mkmat gravity share)
 target_link_libraries(syngrav gravity SWD share)
