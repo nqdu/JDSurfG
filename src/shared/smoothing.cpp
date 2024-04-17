@@ -2,35 +2,22 @@
 #include "shared/spherical.hpp"
 #include <Eigen/LU>
 
-void smooth_grad(float* grad,int nx,int ny,int nz,float sigma_h,float sigma_v)
-{
-    float grad1[nx*ny*nz];
-    memcpy(grad1,grad,sizeof(float)*nx*ny*nz); 
-
-    //omp_set_num_threads(3);
-    #pragma omp parallel for shared(grad,grad1) collapse(3)
-    for(int k=0;k<nz;k++){
-    for(int j=0;j<ny;j++){
-    for(int i=0;i<nx;i++){
-        int n = k * ny * nx + j * nx + i;
-        float sum_k = 0., sum_n = 0.;
-        for(int k1=0;k1<nz;k1++){
-        for(int j1=0;j1<ny;j1++){
-        for(int i1=0;i1<nx;i1++){
-            int n1 = k1 * ny * nx + j1 * nx + i1;
-            // compute azimuthal distance
-            float delta = std::hypot(1. * (i-i1),1. * (j-j1));
-
-            // compute integrals
-            float tmp =  std::exp(- pow(delta,2) * 0.5 / (sigma_h * sigma_h))
-                         * std::exp(-pow(k-k1,2) * 0.5 / (sigma_v * sigma_v));
-            sum_k += grad1[n1] *tmp;
-            sum_n += tmp;
-        }}}
-        grad[n] = sum_k / sum_n;
-    }}}
-}
-
+/**
+ * @brief deprecated smooth function, so slow ...
+ * 
+ * @param grad 
+ * @param nx 
+ * @param ny 
+ * @param nz 
+ * @param dlat 
+ * @param dlon 
+ * @param dz 
+ * @param lat0 
+ * @param lon0 
+ * @param z0 
+ * @param sigma_h 
+ * @param sigma_v 
+ */
 void smooth_sph(float* grad,int nx,int ny,int nz,
                 float dlat,float dlon,float dz,
                 float lat0,float lon0,float z0,
@@ -117,6 +104,63 @@ void fdcoefs(int acc,float* __restrict__ coefs,int deriv)
     if (d/2 * 2 != d) x(n) = 0.0;
 
     memcpy(coefs,x.data(),sizeof(float)*(acc+1));
+}
+
+/**
+ * @brief interpolate data with irregular z to new dataset with regular z
+ * 
+ * @param gradorg input grad, shape(nx,ny,nz), col major
+ * @param gradinp interpolated grad, shape(nx,ny,nz1),col major
+ * @param nx/ny/nz dimension 
+ * @param nz1 nz1 = (dep[-1] - dep[0]) / (min(dz) * 0.99)
+ * @param dep z vector, monotonically increase vector
+ * @param fwd if true interp gradinp, else interp gradorg
+ */
+void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
+                        int nx,int ny,int nz,int nz1,const float *dep,bool fwd)
+{
+    // get dz for regular grid
+    float dz = (dep[nz-1] - dep[0]) / (nz1 - 1);
+
+    // map input data to tensor
+    Eigen::Map<fmat2> grad(gradorg,nx*ny,nz);
+    Eigen::Map<fmat2> gradr(gradinp,nx*ny,nz1);
+
+    // interpolate
+    if(fwd) { // interpolate the gradient to regular grid
+        for(int k = 0; k < nz1; k ++) {
+            // copy boundary value
+            if(k == 0 || k == nz1 - 1) {
+                memcpy(&gradr(0,k),&grad(0,k),sizeof(float) * nx * ny);
+                continue;
+            }
+
+            // check the location in original coordinates
+            float z = dep[0] + k * dz;
+            int k1 = 0;
+            for(; k1 < nz; k1 ++) {
+                if(dep[k1] <= z && z < dep[k1 + 1]) {
+                    break;
+                }
+            }
+            float coef = (z - dep[k1]) / (dep[k1 + 1] - dep[k1]);
+
+            // interpolate
+            gradr.col(k) = grad.col(k1) + coef * (grad.col(k1+1) - grad.col(k1));
+        }
+    }
+    else { // interpolate back
+        for(int k = 0; k < nz ; k ++) {
+            if(k == 0 || k == nz-1) {
+                memcpy(&grad(0,k),&gradr(0,k),sizeof(float) * nx * ny);
+                continue;
+            }
+
+            int k1  = (dep[k] - dep[0]) / dz;
+            float coef = (dep[k] - (dep[0] + k1 * dz)) / dz;
+            grad.col(k) = gradr.col(k1) + coef * (gradr.col(k1+1) - gradr.col(k1));
+        }
+    }
 }
 
 /**
@@ -311,30 +355,3 @@ void smooth_sph_pde(float* gradin,int nx,int ny,int nz,
         grad(i,j,k) = grad_old(i+n2,j+n2,k+n2);
     }}}
 }
-
-// void find_quadratic_min(const float *x,const float *y,int n,float &xmin,float &ymin)
-// {
-//     Eigen::MatrixXd A(3,3);
-//     Eigen::VectorXd b(3);
-//     A.setConstant(1.);
-//     for(int i =0; i < 3; i ++) {
-//         A(i,0) = x[i] * x[i];
-//         A(i,1) = x[i];
-//         b[i]  = y[i];
-//     }
-
-//     // solver linear system
-//     Eigen::Vector3d m = A.colPivHouseholderQr().solve(b);
-
-//     xmin =  -m(1) / (2.0 * m(0)); // x0 = -b / (2 * a)
-//     ymin = (4 * m(0) * m(2) - m(1)*m(1)) / (4 * m(0));
-
-//     if(xmin < 0){
-//         int ic = 0;
-//         for(int i = 1; i < n; i ++) {
-//             if(y[ic] > y[i]) ic = i;
-//         }
-//         xmin = x[ic];
-//         ymin = y[ic];
-//     }
-// }
