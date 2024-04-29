@@ -131,6 +131,17 @@ read_swd_data(const std::string &datafile)
             starp = endp;
         }
     }
+    if(nmode > 0) {
+        printf("Love wave phase velocity used,periods:(s)\n");
+        for(int im = 0; im < nmode; im ++) {
+            printf("mode %d: ",im);
+            for(int it = 0; it < nt; it ++){
+                printf("%7.1f ",this ->tLc(it,im));
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
 
     // Lg
     assert(fgets(line,MAX_LEN*sizeof(char),fp)!=NULL);
@@ -151,6 +162,17 @@ read_swd_data(const std::string &datafile)
             this ->tLg(it,im) = std::strtof(starp,&endp);
             starp = endp;
         }
+    }
+    if(nmode > 0) {
+        printf("Love wave group velocity used,periods:(s)\n");
+        for(int im = 0; im < nmode; im ++) {
+            printf("mode %d: ",im);
+            for(int it = 0; it < nt; it ++){
+                printf("%7.1f ",this ->tLg(it,im));
+            }
+            printf("\n");
+        }
+        printf("\n");
     }
 
     if(fgets(line,MAX_LEN*sizeof(char),fp)==NULL){
