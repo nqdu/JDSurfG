@@ -98,6 +98,13 @@ directory \texttt{bin/}:
 \end{lstlisting}
 That means you have finished installation. \\
 
+If you want to check some functionalities in the package, you can use the command:
+\begin{lstlisting}[language=bash]
+cmake .. -DCXX=g++ -DFC=gfortran -DEIGEN_INC=/path/to/eigen \
+        -DBUILD_TEST=TRUE;
+make -j4
+\end{lstlisting}
+
 \section{Direct Surface Wave Tomography Module} 
 This module need 3 (4 if checkerboard or other test 
 is required) input files:
