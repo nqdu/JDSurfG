@@ -81,6 +81,8 @@ if (${BUILD_TEST})
   target_link_libraries(test_fmst surftomo SWD share)
   add_executable(test_smooth ${PROJECT_SOURCE_DIR}/test/smooth/main.cpp)
   target_link_libraries(test_smooth share)
+  add_executable(test_swd ${PROJECT_SOURCE_DIR}/test/swd/main.cpp)
+  target_link_libraries(test_swd SWD share)
 endif()
 
 target_link_libraries(mkmat gravity share)

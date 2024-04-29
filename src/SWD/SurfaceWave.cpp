@@ -356,15 +356,16 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
                 for(int i = 0; i < nt; i ++) {
                     int k = i + idx;
                     double cg;
-                    sregn96_(rthk,rvp,rvs,rrho,rmax,&tLc(i,mode),vc + k,&cg,
-                            ur,uz,tr,tz,dcdar,dcdbr,dcdhr,dcdrr,iflsph);
-                    _ParamConvert(dep,vp,vs,rho,nz,sublayer,
-                                rthk,rvp,rvs,rrho,rmax,dcdar,kvp+k*nz);
+                    slegn96_(rthk,rvs,rrho,rmax,&tLc(i,mode),vc+k,&cg,
+                            uz,tz,dcdbr,dcdhr,dcdrr,iflsph);
                     _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                                 rthk,rvp,rvs,rrho,rmax,dcdbr,kvs+k*nz);
                     _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                                 rthk,rvp,rvs,rrho,rmax,dcdrr,krho+k*nz);  
                     vout[k] = vc[k];
+
+                    // zero out kvp
+                    for(int iz = 0; iz < nz; iz ++) kvp[k * nz + iz] = 0.;
                 }
                 idx += nt;
             }
@@ -374,6 +375,7 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
         int nmode = tLg.cols();
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tLg.col(mode));
+            if(nt == 0) continue;
             double cp[nt],t1[nt],t2[nt],c1[nt],c2[nt];
             double dt = 0.01;
             for(int i=0;i<nt;i++){
@@ -385,17 +387,18 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
             surfdisp(rthk,rvp,rvs,rrho,rmax,t2,c2,nt,"Lc",mode,sphere);
             for(int i=0;i<nt;i++){
                 int k = i + idx;
-                sregnpu_(rthk,rvp,rvs,rrho,rmax,&tLg(i,mode),cp+i,vc+k,
-                        ur,uz,tr,tz,t1+i,c1+i,t2+i,c2+i,dcdar,
-                        dcdbr,dcdhr,dcdrr,dudar,dudbr,dudhr,dudrr,iflsph);
-                _ParamConvert(dep,vp,vs,rho,nz,sublayer,
-                            rthk,rvp,rvs,rrho,rmax,dudar,kvp+k*nz);
+                slegnpu_(rthk,rvs,rrho,rmax,&tLg(i,mode),cp+i,vc+k,uz,tz,
+                        t1 + i,c1 + i, t2 + i,c2 + i,dcdbr,dcdhr,dcdrr,
+                        dudbr,dudhr,dudrr,iflsph);
                 _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                             rthk,rvp,rvs,rrho,rmax,dudbr,kvs+k*nz);
                 _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                             rthk,rvp,rvs,rrho,rmax,dudrr,krho+k*nz);
                 vout[k] = vc[k];
                 vc[k] = cp[i];     
+
+                // zero out kvp
+                for(int iz = 0; iz < nz; iz ++) kvp[k * nz + iz] = 0.;
             } 
             idx += nt;
         }

@@ -68,7 +68,7 @@ sensitivity kernels.\\
 I should note that this package was only tested by 
 several people on similar computational conditions, 
 so it might contain some bugs in it. I'd appreciate 
-to receive bug reportings and modify some part of 
+to receive bug reporting and modify some part of 
 it when obtaining good suggestions. In the long term, 
 I would add some new functions to this package, 
 
@@ -91,12 +91,19 @@ you can compile it by using
     cmake .. -DCXX=g++ -DFC=gfortran -DEIGEN_INC=/path/to/eigen
     make -j4
 \end{lstlisting}
-Then you will find four excecutable files in the 
+Then you will find four executable files in the 
 directory \texttt{bin/}:
 \begin{lstlisting}[language=bash]
     mkmat DSurfTomo JointSG syngrav  
 \end{lstlisting}
 That means you have finished installation. \\
+
+If you want to check some functionalities in the package, you can use the command:
+\begin{lstlisting}[language=bash]
+cmake .. -DCXX=g++ -DFC=gfortran -DEIGEN_INC=/path/to/eigen \
+        -DBUILD_TEST=TRUE;
+make -j4
+\end{lstlisting}
 
 \section{Direct Surface Wave Tomography Module} 
 This module need 3 (4 if checkerboard or other test 
@@ -124,7 +131,7 @@ format of each file:
          $(lat_0 \sim lat_1,lon_0\sim lon_1,0\sim dep_1)$, 
         you should edit your input model at least in 
         region $(lat_0-dlat \sim lat_1+dlat, lon_0-dlon \sim lon_1+dlon,0 \sim dep_1+dz)$.
-    \item Stations should be far away enought from target model 
+    \item Stations should be far away enough from target model 
             boundaries, or some warnings will be given 
             when you running this package. This is to 
             avoid that surface wave train travels along
@@ -180,14 +187,14 @@ see the meaning of each parameter in the template file.
 \item \texttt{ITER\_CURRENT} Current iteration of the initial model. If set to 10, the initial model will be indexed as \texttt{mod\_iter10} in the result directory. This option can be useful if you want more iterations.
 \item \texttt{MIN/MAX\_VELOC} Minimum and maximum velocity permitted. This option provide the prior constraints on the result shear wave velocity model.
 \item \texttt{SYN\_TEST} Do synthetic test. The \texttt{MOD.true} file should be provided in this case.
-\item \texttt{NOISE\_LEVEL} The gaussian noise level added to synthetic data as observations. It is defined as:
+\item \texttt{NOISE\_LEVEL} The Gaussian noise level added to synthetic data as observations. It is defined as:
 \[   
     d_{obs}^i = d_{syn}^i +  noiselevel * N(0,1)
 \]
 \item \texttt{INV\_METHOD} Choose the inversion method you want. I strongly recommend LSMR (for small scale problems) and L-BFGS (large scale).
 \item \texttt{SMOOTH} and \texttt{Damp} The second and first Tikhonov regularization coefficients used in inversion. The two parameters only work when \texttt{INV\_METHOD} = 0 (LSMR mode).
 \item \texttt{NTRHEADS} Number of threads used in LSMR solver. Usually 2-4 is enough.
-\item \texttt{SMOOTH\_IN\_KM} Choose the smoothing operation in NLCG/L-BFGS inversion. Note that in NLCG/L-BFGS iterations, we don't apply Tikhonov regularization. Instead, we just convolve the search direction with a Guassian smoothing function.
+\item \texttt{SMOOTH\_IN\_KM} Choose the smoothing operation in NLCG/L-BFGS inversion. Note that in NLCG/L-BFGS iterations, we don't apply Tikhonov regularization. Instead, we just convolve the search direction with a Gaussian smoothing function.
 \item \texttt{SIGMA\_H,SIGMA\_V} Gaussian smoothing parameters in horizontal and vertical direction.  The search direction wiil be smoothed as:
 \[
 \bar{g}(\bm{x}) = \frac{1}{W(\bm{x})} \int_V g(\bm{x}) e^{- \frac{1}{2} x^T \Sigma^{-1} x} \rm{d}V
@@ -258,7 +265,7 @@ This file contains three kinds of information. The data header, source or master
 \verb!#!) and receiver stations (without \verb!#! in each
 line).
 
-The data header contains the dispersion data description of wave type and period information.  The first line contains the number of modes $n$ (the first number) will be used for Rayleigh wave phase velocity. Followed this number are $n$ numbers which indicate the number of period points this mode will use. Then there will be $n$ lines contain the period information.  For example, if you want to use the fundamental and first mode dispersion data with period [4.5,7,10]s and [3,4]s respectively, the header should be like: \\ \\ 
+The data header contains the dispersion data description of wave type and period information.  The first line contains the number of modes $n$ (the first number) will be used for Rayleigh wave phase velocity. Followed this number are $n$ numbers which indicate the number of period points this mode will use. Then there will be $n$ lines contain the period information.  For example, if you want to use the fundamental and first mode dispersion data with period [4,7.5,10]s and [3,4]s respectively, the header should be like: \\ \\ 
 2 3 2 \verb!#! rayleigh phase \\
 4 7.5 10 \\ 
 3 4 \\
@@ -278,7 +285,7 @@ this line is:
                             Rayleigh it is 2, and it is 1 for Love wave.
     \item \texttt{velotype}: velocity type, 0 for phase velocity
                             and 1 for group velocity.
-    \item \texttt{period-index}: The period index number.
+    \item \texttt{period-index}: The period index number, start from 1.
 \end{itemize}
 For example, if in our dataset, the dispersion periods 
 for fundamental mode Rayleigh phase velocity is at periods 4s,5s,6s,7s, 
@@ -422,7 +429,7 @@ The format of \verb!kernel/! is the same as the files
 in \ref{surface wave output files}. In the folder \verb!results/!,
 it contains models (\verb!joint_mod_iter*!), 
 surface wave travel time (\verb!res_surf*.dat!) and 
-graivty anomaly (\verb!res_grav*.dat!) 
+gravity anomaly (\verb!res_grav*.dat!) 
 of each iteration. The format of gravity anomaly is:
 \begin{center}
     \texttt{lon lat observed-anomalies synthetic-anomalies}
@@ -463,7 +470,7 @@ The maximum number of threads depends on your own platform. You can use the comm
 \begin{lstlisting}[language=bash]
 cat /proc/cpuinfo |grep cores |wc -l
 \end{lstlisting}
-The maximum number of threads is half of the output number from the above command. 
+The maximum number of threads is \texttt{half} of the output number from the above command. 
 
 \subsection{Empirical Relations}
 Empirical relations are utilized to connect density and 
@@ -513,7 +520,7 @@ this problem may from that the format of your initial model
 is different from the required one. You could check the model in 
 file \texttt{fort.66} and compare that with your model. 
 Another possible reason is that you take inappropriate 
-Tickonov regulariztion parameters (i.e. damping and smooth factors)
+Tikhonov regularization parameters (i.e. damping and smooth factors)
 which lead to abrupt change of previous model.
 
 The second warning is \texttt{"Source lies outside bounds 
@@ -532,17 +539,8 @@ you to keep the damping factor to a small value (such as 0.001) during
 your inversion, and only tune the smoothing factor. 
 
 
-In the folder \texttt{utils/}, we have prepared two scripts to help 
-you tune the smoothing factor. The first one is a bash script 
-\texttt{\text{tune\_L\_curve.sh}}
-that will generate a series of inversion results in the folder 
-\texttt{storage/}. Please read 
-this script carefully and then try your own examples.
-
-The second python script \texttt{utils/lcurve.py} will help you 
-generate a L-curve based on your results. Before running 
-this script, please change all the 
-required parameters in the function \texttt{main()}.  
+In the folder \texttt{utils/}, we have prepared one python script \texttt{utils/lcurve.py} to help 
+you tune the smoothing factor. The script will output the roughness of the inverted model $\|L(m-m_0)\|_2$ and $\|m-m_0\|_2$
 
 \subsection{Checkpoint Restart}
 Sometimes you want to start from one of the results (like mod\_iter5.dat)
@@ -554,8 +552,7 @@ python out2init.py mod_iter5.dat MOD05
 Then this script will convert the output model to the format 
 of the initial model. This script will be useful in joint inversion.
 And also, it may help you restart from some checkpoint if some issues 
-happend.
-
+happened.
 
 % biblio GJI
 \bibliographystyle{abbrvnat}
