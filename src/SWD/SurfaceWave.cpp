@@ -701,7 +701,7 @@ compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
     dmat3 kernel(nx*ny,nz,kmax);
 
     //compute disper map and 1-D kernel
-    printf("computing SWD time gradient ...\n");
+    printf("computing SWD gradient ...\n");
     this -> get_1d_kernel(vs,vc,vout,kernel);
 
     // get omp threads

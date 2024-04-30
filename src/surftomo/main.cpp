@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
     for(int k=0;k<nz;k++){
     for(int j=0;j<ny;j++){
     for(int i=0;i<nx;i++){
-        fprintf(fp,"%f %f %f %f\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+        fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
     }}}
     fclose(fp);
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]){
         for(int k=0;k<nz;k++){
         for(int j=0;j<ny;j++){
         for(int i=0;i<nx;i++){
-            fprintf(fp,"%f %f %f %f\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
         }}}
         fclose(fp);
     }

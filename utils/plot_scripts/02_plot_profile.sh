@@ -1,14 +1,14 @@
 #!/bin/bash
+. parameters.sh
 
 # set your profile if required
-gmt project -C88.7/39.08 -E88.7/40.47 -G1.0 -Q> prof.dat
+gmt project -C105/34.3 -E105/26 -G1.0 -Q> prof.dat
 
 # interpolate
-depth=(`awk '{print $3}' ../results/mod_iter0.dat |sort -n |uniq`)
-nz=`echo "${#depth[@]} - 4"|bc -l`
+depth=(`awk '{print $3}' $RESULT_DIR//mod_iter$MODEL.dat |sort -n |uniq`)
+nz=`echo "${#depth[@]} - 1"|bc -l`
 args=""
 :> out.dat
-:> out.true.dat
 for ((i=0;i<$nz;i++));
 do  
     dep=${depth[$i]}
@@ -28,9 +28,11 @@ xmax=`echo $info |awk '{print $2}'`
 ymin=`echo $info |awk '{print $3}'`
 ymax=`echo $info |awk '{print $4}'`
 region="$xmin/$xmax/$ymin/$ymax"
+dx=`echo "$xmin $xmax" |awk '{print ($2-$1) / 127.}'`
+dy=`echo "$ymin $ymax" |awk '{print ($2-$1) / 127.}'`
 
 # to grd
-gmt surface out.dat -Gout.grd -I128+n/128+n  -R$region
+gmt surface out.dat -Gout.grd -I$dx/$dy  -R$region
 vmin=`gmt grdinfo -C out.grd |awk '{print $6}'`
 vmax=`gmt grdinfo -C out.grd  |awk '{print $7}'`
 echo $vmin $vmax
@@ -42,7 +44,7 @@ gmt begin profA jpg
 gmt basemap -R$region $proj -Bxaf -Byaf+l"Depth (km)" -BWSne
 gmt grdimage  out.grd -Cout.cpt -E200
 #gmt grdcontour out.grd -R$region $proj -Gd6c -A0.8,1.2,1.6,2.0,2.4,2.8,3.2,3.6, -Gd6c
-gmt colorbar -DjMR+w3c/.25c+o-0.8c/0c+m -Cout.cpt -Bx0.5f0.1+l"Vs,km/s" -By+lkm/s
+gmt colorbar -Cout.cpt -Bx0.5f0.1+l"Vs,km/s" -By+lkm/s
 gmt end
 
 rm *.grd *.cpt tmp* out.dat out.true.dat

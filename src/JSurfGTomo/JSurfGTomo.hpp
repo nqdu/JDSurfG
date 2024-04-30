@@ -12,6 +12,8 @@ public:
     float weight1, weight2; // weight for each dataset
     float p; //  relative weight params, see julia et al(2000)
     int rm_grav_avg;  // remove gravity average value 
+
+    void get_relative_weights(size_t n1,size_t n2,float &w1,float &w2) const;
 };
 
 class JSurfGTomo{

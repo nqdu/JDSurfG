@@ -28,6 +28,31 @@ read_invparams(const std::string &paramfile)
     infile.close();
 }
 
+/**
+ * @brief Get the relative weights for two dataset misfit_joint = w1 * mis1 + w2 * mis2
+ * 
+ * @param n1/n2 size of each dataset
+ * @param w1/2 weight for set 1/2
+ */
+void JSurfGParams::
+get_relative_weights(size_t n1,size_t n2,float &w1,float &w2) const
+{
+    double s1,s2; 
+    s1 = std::abs(p) / (n1 * std::pow(weight1,2));
+    s2 = (1. - std::abs(p)) / (n2 * std::pow(weight2,2));
+
+    if (s1 < 1.0e-6 * s2) {
+        s1  = 0.;
+        s2 = 1.;
+    }
+    else {
+        s2 = s2 / s1;
+        s1 = 1.;
+    }
+    w1 = s1;
+    w2 = s2;
+}
+
 void JSurfGTomo ::
 read_model(const std::string &modfile,const std::string &modtrue,
             const std::string &modref)
@@ -237,10 +262,7 @@ compute_misfit(const fvec &dsyn) const
     // compute weight factor
     int m1 = surf.obst.size(), m2 = this->obsg.size();
     float s1,s2; 
-    s1 = param.p / (m1 * std::pow(param.weight1,2));
-    s2 = (1. - param.p) / (m1 * std::pow(param.weight2,2));
-    s2 = s2 / s1;
-    s1 = 1.;
+    param.get_relative_weights(m1,m2,s1,s2);
 
     // misfit
     float chi1 = (dsyn.segment(0,m1) - surf.obst).square().sum() * 0.5;
@@ -281,13 +303,14 @@ void JSurfGTomo::
 compute_grav_grad(const fmat3 &vs,fvec &dgsyn,fvec &grad) const
 {
     int m = obsg.size();
-    dgsyn.resize(m);
+    dgsyn.resize(m); dgsyn.setZero();
 
     // compute gravity
     int nx = vs.dimension(0), ny = vs.dimension(1);
     int nz = vs.dimension(2);
     int size = (nx-2) * (ny - 2) * (nz-1);
     fvec drho(size), deriv(size);
+    grad.resize(size);
     for(int k = 0; k < nz - 1; k ++) {
     for(int j = 0; j < ny - 2; j ++) {
     for(int i = 0; i < nx - 2; i ++) {
@@ -306,12 +329,14 @@ compute_grav_grad(const fmat3 &vs,fvec &dgsyn,fvec &grad) const
 
     // synthetic data
     gmat.aprod(1,drho.data(),dgsyn.data()); // dgsyn = G * drho 
+    if(param.rm_grav_avg) {
+        dgsyn -= dgsyn.sum() / m;
+    }
 
     // compute grad
     grad.setZero(); 
-    fvec obs = -obsg;
-    gmat.aprod(2,grad.data(),dgsyn.data()); // temp = G.T G drho 
-    gmat.aprod(2,grad.data(),obs.data()); // temp = -G.T d 
+    fvec temp = dgsyn -obsg;
+    gmat.aprod(2,grad.data(),temp.data()); // temp = G.T  (dsyn - dobs)
 
     // multiply vs to grad
     for(int k = 0; k < nz - 1; k ++) {
@@ -346,13 +371,17 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
     dsyn.resize(m1+m2);
 
     // compute swd data/grad
-    surf.compute_grad(vsf,d1,grad1);
+    printf("computing gravity gradient ...\n");
     this -> compute_grav_grad(vsf,d2,grad2);
+    surf.compute_grad(vsf,d1,grad1);
 
-    // compute gravity data/grad
-    grad2.setZero();
-    fvec x1 = x;
-    gmat.aprod(1,x1.data(),grad2.data()); // Gm
+    //printf("norm of both grad : %g %g\n",std::sqrt(grad1.abs().sum()),std::sqrt(grad2.abs().sum()));
+    fvec res1 = surf.obst - d1;
+    fvec res2 = obsg - d2;
+    float mean1 = res1.sum() / m1, mean2 = res2.sum() / m2;
+    float rms1 = std::sqrt(res1.square().sum() / m1);
+    float rms2 = std::sqrt(res2.square().sum() / m2);
+    printf("rms for both data: %g %g\n",rms1,rms2);
 
     // cache data    
     dsyn.segment(0,m1) = d1;
@@ -360,10 +389,7 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
 
     // cache grad
     float s1,s2; 
-    s1 = param.p / (m1 * std::pow(param.weight1,2));
-    s2 = (1. - param.p) / (m1 * std::pow(param.weight2,2));
-    s2 = s2 / s1;
-    s1 = 1.;
+    param.get_relative_weights(m1,m2,s1,s2);
     grad = grad1 * s1 + grad2 * s2;
 }
 
@@ -385,7 +411,7 @@ smoothing(fvec &grad) const
     }
 
     // create regular data
-    int nz1 = (dep[nz-2] - dep[0]) / (dz * 0.99);
+    int nz1 = (dep[nz-2] - dep[0]) / (dz * 0.9) + 1;
     dz = (dep[nz-2] - dep[0]) / (nz1 - 1);
     fmat3 gradr(nx-2,ny-2,nz1);
     interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),true);
@@ -493,16 +519,19 @@ inversion(fmat3 &vsf,fvec &dsyn) const
 
     // compute weights
     float s1,s2;
-    if(param.ifsyn) {
-        s1 = param.noilevel1 / std::sqrt(m1 * 1.);
-        s2 = param.noilevel2 / std::sqrt(m1 * 1.);
-    }
-    else {
-        s1 = param.weight1 / std::sqrt(m1 * 1.);
-        s2 = param.weight2 / std::sqrt(m1 * 1.);
-    }
-    s1 = std::sqrt(param.p / m1) / s1;
-    s2 = std::sqrt((1-param.p) / m2) / s2;
+    param.get_relative_weights(m1,m2,s1,s2);
+    s1 = std::sqrt(s1);
+    s2 = std::sqrt(s2);
+    // if(param.ifsyn) {
+    //     s1 = param.noilevel1 / std::sqrt(m1 * 1.);
+    //     s2 = param.noilevel2 / std::sqrt(m1 * 1.);
+    // }
+    // else {
+    //     s1 = param.weight1 / std::sqrt(m1 * 1.);
+    //     s2 = param.weight2 / std::sqrt(m1 * 1.);
+    // }
+    // s1 = std::sqrt(param.p / m1) / s1;
+    //s2 = std::sqrt((1-param.p) / m2) / s2;
     //s2 = s2 / s1; s1 = 1;
 
     // initialize matrix and read frechet binary file
