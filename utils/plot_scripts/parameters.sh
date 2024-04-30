@@ -1,0 +1,2 @@
+RESULT_DIR=../resultsJ/
+MODEL=20
