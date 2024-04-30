@@ -113,7 +113,7 @@ void fdcoefs(int acc,float* __restrict__ coefs,int deriv)
  * @param gradinp interpolated grad, shape(nx,ny,nz1),col major
  * @param nx/ny/nz dimension 
  * @param nz1 nz1 = (dep[-1] - dep[0]) / (min(dz) * 0.99)
- * @param dep z vector, monotonically increase vector
+ * @param dep z vector, monotonically increase vector, shape (nz)
  * @param fwd if true interp gradinp, else interp gradorg
  */
 void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
@@ -131,14 +131,15 @@ void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
         for(int k = 0; k < nz1; k ++) {
             // copy boundary value
             if(k == 0 || k == nz1 - 1) {
-                memcpy(&gradr(0,k),&grad(0,k),sizeof(float) * nx * ny);
+                int k1 = k == 0 ? 0 : nz - 1;
+                memcpy(&gradr(0,k),&grad(0,k1),sizeof(float) * nx * ny);
                 continue;
             }
 
             // check the location in original coordinates
             float z = dep[0] + k * dz;
             int k1 = 0;
-            for(; k1 < nz; k1 ++) {
+            for(; k1 < nz-1; k1 ++) {
                 if(dep[k1] <= z && z < dep[k1 + 1]) {
                     break;
                 }
@@ -152,7 +153,8 @@ void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
     else { // interpolate back
         for(int k = 0; k < nz ; k ++) {
             if(k == 0 || k == nz-1) {
-                memcpy(&grad(0,k),&gradr(0,k),sizeof(float) * nx * ny);
+                int k1 = k == 0 ? 0 : nz1 - 1;
+                memcpy(&grad(0,k),&gradr(0,k1),sizeof(float) * nx * ny);
                 continue;
             }
 

@@ -129,7 +129,6 @@ void compute_kernel(const float *vs,const float *vp,const float *rho,const float
     double *dcdrr = new double [rmax],*dcdhr = new double [rmax];
 
     // prepare parameters
-
     bool sphere = true;
     int iflsph = 1;
     int mode = 0;
