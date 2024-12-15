@@ -536,22 +536,22 @@ inversion(fmat3 &vsf,fvec &dsyn) const
 
     // initialize matrix and read frechet binary file
     csr_matrix smat(m1+m2+n,n,nar + gmat.nonzeros + n*7);
-    FILE *fp = fopen("frechet.bin","rb");
-    assert(fread(smat.indptr,sizeof(int),1,fp) == 1);
-    assert(fread(smat.indptr,sizeof(int),1,fp) == 1);
+    std::ifstream fp("frechet.bin",std::ios::binary);
+    fp.read((char*)smat.indptr,sizeof(int));
+    fp.read((char*)smat.indptr,sizeof(int));
     smat.indptr[0] = 0;
     for(int i=0;i<m1;i++){
         int col,nar1;
-        assert(fread(&col,sizeof(int),1,fp) == 1);
-        assert(fread(&nar1,sizeof(int),1,fp) == 1);
+        fp.read((char*)&col,sizeof(int));
+        fp.read((char*)&nar1,sizeof(int));
         int start = smat.indptr[col];
         smat.indptr[col+1] = start +  nar1;
 
         // read data
-        assert(fread(smat.indices+start,sizeof(int),nar1,fp) == (size_t)nar1);
-        assert(fread(smat.data+start,sizeof(float),nar1,fp) == (size_t)nar1);
+        fp.read((char*)(smat.indices + start),sizeof(int) * nar1);
+        fp.read((char*)(smat.data + start),sizeof(float) * nar1);
     }
-    fclose(fp);
+    fp.close();
     for(int i=m1;i<m1+m2+n;i++) smat.indptr[i+1] = smat.indptr[m1];
 
     // delete kernel file

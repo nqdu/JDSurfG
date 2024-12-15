@@ -1,4 +1,6 @@
-#pragma once
+#ifndef JDSURFG_SHARED_CSR_MATRIX_H_
+#define JDSURFG_SHARED_CSR_MATRIX_H_
+
 #include<iostream>
 
 template<typename T=float>
@@ -69,7 +71,7 @@ public:
     int rows() const;
     int cols() const;
 
-    void cpp2fortran(bool inverse=false);
+    void cpp2fort(bool inverse=false);
 
     void lsmr_solver(float *x,const float *b,LSMRDict<float> &dict);
 
@@ -81,3 +83,5 @@ public:
 void merge_csr_files(int nprocs,const std::string &outfile);
 void add_regularization(csr_matrix &smat,float weight,int nx,int ny,int nz);
  
+
+#endif // end JDSURFG_SHARED_CSR_MATRIX_H_

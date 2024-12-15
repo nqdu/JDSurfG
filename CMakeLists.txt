@@ -33,20 +33,21 @@ project(JDSurfG LANGUAGES CXX Fortran)
 set(CMAKE_BUILD_TYPE RELEASE)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_SOURCE_DIR}/build/obj)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/obj)
 
 ################# cmake setup #################
-set(CMAKE_CXX_FLAGS  "-g -DEIGEN_NO_DEBUG -DEIGEN_DONT_PARALLELIZE")
+set(CMAKE_CXX_FLAGS  "-g  -DEIGEN_DONT_PARALLELIZE")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ffast-math")
-  set(CMAKE_Fortran_FLAGS "-O3 -march=native -ffixed-line-length-none")
+  set(CMAKE_CXX_FLAGS_RELEASE " ${CMAKE_CXX_FLAGS_RELEASE} -march=native -ffast-math")
+  #set(CMAKE_CXX_FLAGS_RELEASE " -O2")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -march=native -ffixed-line-length-none")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -xHost -DEIGEN_STRONG_INLINE=inline")
-  set(CMAKE_Fortran_FLAGS "-O3 -xHost -extend-source")
+  set(CMAKE_CXX_FLAGS_RELEASE " ${CMAKE_CXX_FLAGS_RELEASE} -xHost -DEIGEN_STRONG_INLINE=inline")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -xHost -extend-source")
 endif()
 
-set(CMAKE_VERBOSE_MAKEFILE off)
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 ################# find packages #################
 find_package(OpenMP REQUIRED)

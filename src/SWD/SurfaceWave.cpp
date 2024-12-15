@@ -3,7 +3,7 @@
 #include "shared/parallel.hpp"
 #include "SWD/empirical.hpp"
 #include "shared/csr_matrix.hpp"
-#include<fstream>
+#include <fstream>
 
 /**
  * compute global index in [0,kmax-1] for a given wave type and given mode
@@ -594,13 +594,13 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
 
         // open a file to save kernel
         std::string filename = outfile +  "."  +  std::to_string(myrank);
-        FILE *fp;
-        if((fp=fopen(filename.c_str(),"wb"))==NULL){
+        std::ofstream fp(filename,std::ios::binary);
+        if(!fp.is_open()){
             printf("cannot open file  %s\n",filename.c_str());
             exit(1);
         }
-        fwrite(&m,sizeof(int),1,fp);
-        fwrite(&n,sizeof(int),1,fp);
+        fp.write((char*)&m,sizeof(int));
+        fp.write((char*)&n,sizeof(int));
 
         // alloc tasks
         int starid,endid;
@@ -639,8 +639,8 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
 
                 int nar = (frechet.abs()>0.0).cast<int>().sum();
                 c = p.counter + i;
-                fwrite(&c,sizeof(int),1,fp);
-                fwrite(&nar,sizeof(int),1,fp);
+                fp.write((char*)&c,sizeof(int));
+                fp.write((char*)&nar,sizeof(int));
                 nonzeros[myrank] += nar;
 
                 // save kernel
@@ -655,8 +655,8 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
                         counter += 1;
                     }
                 }
-                fwrite(myindx,sizeof(int),nar,fp);
-                fwrite(value,sizeof(float),nar,fp);
+                fp.write((char*)myindx,sizeof(int) * nar);
+                fp.write((char*)value,sizeof(float) * nar);
                 data[p.counter + i] = ttime[i];
             }
 
@@ -665,7 +665,7 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
         }
 
         // close file
-        fclose(fp);
+        fp.close();
     }
 
     // merge all files to 1 big file

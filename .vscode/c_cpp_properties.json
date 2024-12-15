@@ -5,12 +5,11 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/Users/nqdu/software/eigen-3.4.0",
-                "/opt/homebrew/Cellar/libomp/18.1.1/include"
+                "/opt/homebrew/Cellar/libomp/18.1.4/include"
             ],
-            "defines": ["-D","SPM_FAST"],
-            "compilerPath": "/usr/bin/gcc",
+            "compilerPath": "/usr/bin/g++ ",
             "cStandard": "gnu17",
-            "cppStandard": "gnu++14",
+            "cppStandard": "gnu++11",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],

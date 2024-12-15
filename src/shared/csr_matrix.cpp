@@ -1,6 +1,5 @@
-#include "shared/csr_matrix.hpp"
-#include <assert.h>
-
+#include "shared/csr_matrix.hpp" 
+#include <fstream>
 
 extern "C"{
 void LSMR(int m, int n, int lenrw, int *rw, int *col, 
@@ -102,7 +101,7 @@ aprod(int mode,float *x, float *y) const
  * @param inverse convert back
  */
 void csr_matrix::
-cpp2fortran(bool inverse)
+cpp2fort(bool inverse)
 {
     if(!inverse){
         for(int i=0;i<nonzeros;i++)indices[i] +=1;
@@ -114,13 +113,20 @@ cpp2fortran(bool inverse)
     }
 }
 
+/**
+ * @brief LSMR solver system Ax = b, this function will not change A
+ * 
+ * @param x unknown variables
+ * @param b data
+ * @param dict 
+ */
 void csr_matrix:: 
 lsmr_solver(float *x,const float *b,LSMRDict<float> &dict)
 {
 
     // initialize x
     for(int i=0;i<MATRIX_COL;i++) x[i] = 0.0;
-    this -> cpp2fortran();
+    this -> cpp2fort();
 
     // solve by lsmr module
     int show = 1;
@@ -130,7 +136,7 @@ lsmr_solver(float *x,const float *b,LSMRDict<float> &dict)
         dict.conlim,dict.itnlim,dict.localSize,x,&dict.istop,
         &dict.itn,&dict.anorm,&dict.acond,&dict.rnorm,
         &dict.arnorm,&dict.xnorm,show,dict.num_threads);
-    this -> cpp2fortran(true);
+    this -> cpp2fort(true);
 }
 
 /**
@@ -142,62 +148,65 @@ void csr_matrix::
 read_binary(const std::string &filename)
 {
     // scan first to read size of the matrix
-    FILE *fp = fopen(filename.c_str(),"rb");
+    std::ifstream fp(filename,std::ios::binary);
     int nar,nar1,m,n,idx;
-    int ier = fread(&m,sizeof(int),1,fp) == 1;
-    ier = fread(&n,sizeof(int),1,fp) == 1;
-    assert(ier == 1);
+    fp.read((char*)&m,sizeof(int));
+    fp.read((char*)&n,sizeof(int));
 
     // read nonzeros/rows in this block
     nar1 = 0;
-    while(fread(&idx,sizeof(int),1,fp) == 1){
-        assert(fread(&nar,sizeof(int),1,fp) == 1);
+    while(!fp.read((char*)&idx,sizeof(int))) {
+        fp.read((char*)&nar,sizeof(int));
         nar1 += nar;
         
         // read temporay 
-        float tmp[nar * 2];
-        assert(fread(tmp,sizeof(float),nar*2,fp) == nar * 2);
+        float *tmp = new float[nar * 2];
+        fp.read((char*)tmp,sizeof(float)*nar*2);
+        delete[] tmp;
     }
-    fclose(fp);
+    fp.close();
 
     // allocate space 
     this -> initialize(m,n,nar1);
 
     // now read data
-    fp = fopen(filename.c_str(),"rb");
-    assert(fread(&m,sizeof(int),1,fp) == 1);
-    assert(fread(&n,sizeof(int),1,fp) == 1);
-    while(fread(&idx,sizeof(int),1,fp) == 1){
-        assert(fread(&nar,sizeof(int),1,fp) == 1);
+    fp.open(filename,std::ios::binary);
+    fp.read((char*)&m,sizeof(int));
+    fp.read((char*)&n,sizeof(int));
+    while(!fp.read((char*)&idx,sizeof(int))){
+        fp.read((char*)&nar,sizeof(int));
         int start = indptr[idx];
         indptr[idx + 1] = nar + start;
-        assert(fread(indices+start,sizeof(int),nar,fp) == (size_t) nar);
-        assert(fread(data+start,sizeof(float),nar,fp) == (size_t) nar);
+        fp.read((char*)(indices + start),sizeof(int)*nar);
+        fp.read((char*)(data + start),sizeof(float)*nar);
     }
-    fclose(fp);
+
+    // close file
+    fp.close();
 }
 
 void csr_matrix:: 
 write_binary(const std::string &filename) const
 {
     // open file
-    FILE *fp;
-    fp = fopen(filename.c_str(),"wb");
-    if(fp == NULL){
-        printf("cannot open file %s\n",filename.c_str());
+    std::ofstream fp(filename,std::ios::binary);
+    if(!fp.is_open()){
+        printf("cannot open file %s\n",filename);
         exit(1);
     } 
 
+    fp.write((char*)&MATRIX_ROW,sizeof(int));
+    fp.write((char*)&MATRIX_COL,sizeof(int));
     for(int i = 0; i < MATRIX_ROW; i++){
         int start = indptr[i], end = indptr[i+1];
         int nonzeros = end - start;
-        fwrite(&i,sizeof(int),1,fp);
-        fwrite(&nonzeros,sizeof(int),1,fp);
-        fwrite(indices+start,sizeof(int),nonzeros,fp);
-        fwrite(data+start,sizeof(float),nonzeros,fp);
+        fp.write((char*)&i,sizeof(int));
+        fp.write((char*)&nonzeros,sizeof(int));
+        fp.write((char*)(indices + start),sizeof(int)*nonzeros);
+        fp.write((char*)(data + start),sizeof(int)*nonzeros);
     }
 
-    fclose(fp);
+    fp.close();
 }
 
 /**
@@ -207,39 +216,41 @@ write_binary(const std::string &filename) const
 */
 void merge_csr_files(int nprocs,const std::string &outfile)
 {
-    FILE *fp,*fpout;
-    fpout = fopen(outfile.c_str(),"wb");
+    std::ifstream fp;
+    std::ofstream fpout;
+    fpout.open(outfile,std::ios::binary);
+
     for(int irank = 0; irank < nprocs; irank ++){
         // open filename
-        std::string filename = outfile + "." + std::to_string(irank);
-        fp = fopen(filename.c_str(),"rb");
+        std::string filename = std::string(outfile) + "." + std::to_string(irank);
+        fp.open(filename.c_str(),std::ios::binary);
 
         //get size 
-        fseek(fp,0L,SEEK_END);
-        long size = ftell(fp) - sizeof(int) * 2; 
-        fclose(fp);
+        fp.seekg(0,std::ios::end);
+        long size = (size_t)fp.tellg() - sizeof(int) * 2;
+        fp.close();
 
         // read rows/cols 
-        fp = fopen(filename.c_str(),"rb");
+        fp.open(filename.c_str(),std::ios::binary);
         int m,n;
-        assert(fread(&m,sizeof(int),1,fp) == 1);
-        assert(fread(&n,sizeof(int),1,fp) == 1);
+        fp.read((char*)&m,sizeof(int));
+        fp.read((char*)&n,sizeof(int));
         if(irank == 0) {
-            fwrite(&m,sizeof(int),1,fpout);
-            fwrite(&n,sizeof(int),1,fpout);
+            fpout.write((char*)&m,sizeof(int));
+            fpout.write((char*)&n,sizeof(int));
         }
 
         // write to fpout
         char *chunk = new char[size + 1];
-        assert(fread(chunk,sizeof(char),size,fp) == (size_t) size);
-        fwrite(chunk,sizeof(char),size,fpout);
-        fclose(fp);
+        fp.read(chunk,size);
+        fpout.write(chunk,size);
+        fp.close();
         
         // remove this file
         std::remove(filename.c_str());
         delete [] chunk;
     }
-    fclose(fpout);
+    fpout.close();
 }
 
 int csr_matrix:: rows() const 

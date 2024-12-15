@@ -3,10 +3,8 @@
  * Written by Zhiwei Li at Dec. 2011
  * Modified by Nanqiao Du by adding parallel module and coordinate format matrix
 */
-#include"gravity/gravity_module.hpp"
-#include<fstream>
-#include<cmath>
-#include <assert.h>
+#include "gravity/gravity_module.hpp"
+#include <cmath>
 #include "shared/parallel.hpp"
 #include "gravity/transform.hpp"
 #include "gravity/gauleg.hpp"
@@ -58,30 +56,35 @@ void OBSSphGraRandom :: chancoor(int flag)
 
 void OBSSphGraRandom :: read_obs_data(const std::string &filename)
 {
-    FILE *fp;
-    char line[256];
-    np = 0;
-    fp = fopen(filename.c_str(),"r");
-    if(fp == NULL) {
+    // open file
+    std::ifstream infile;
+    infile.open(filename);
+    if(!infile.is_open()) {
         printf("cannot open %s\n",filename.c_str());
         exit(1);
     }
-    while(fgets(line,sizeof(line),fp)) {
+
+    // get # of lines
+    std::string line;
+    np = 0;
+    while(std::getline(infile,line)) {
         np += 1;
     }
-    fclose(fp);
+    infile.close();
 
-    assert((fp=fopen(filename.c_str(),"r")) != NULL);
+    // allocate space
     lon = new float [np];
     lat = new float [np];
     Gr = new float [np];
     z0 = new float[np]();
     israd = 0;
 
-    for(int i=0;i<np;i++){
-        assert(fscanf(fp,"%f%f%f",lon+i,lat+i,Gr+i) == 3);
+    // open again
+    infile.open(filename);
+    for(int i = 0; i < np; i ++) {
+        infile >> lon[i] >> lat[i] >> Gr[i];
     }
-    fclose(fp);
+    infile.close();
 
     printf("\nGravity Data: %d points\n",np);
 }
@@ -131,39 +134,39 @@ void MOD3DSphGra :: chancoor(int flag)
 void MOD3DSphGra :: 
 read_model(const std::string &modfile)
 {
-    FILE *fp;
-    int i;
-    float ulx,uly,dx,dy;
-    char line[512];
-
-    // read parameter file
-    if((fp = fopen(modfile.c_str(),"r")) == NULL) {
+    // open file
+    std::ifstream infile;
+    infile.open(modfile);
+    if(!infile.is_open()) {
         printf("cannot open %s\n",modfile.c_str());
         exit(1);
     }
 
-    assert(fgets(line,sizeof(line),fp) != NULL);
-    sscanf(line,"%d%d%d",&ny,&nx,&nz);
-    nx=nx-2;
-    ny=ny-2;
-    nz=nz-1;
+    int i;
+    float ulx,uly,dx,dy;
+    std::string line;
+
+    // read parameter file
+    std::getline(infile,line);
+    sscanf(line.c_str(),"%d%d%d",&ny,&nx,&nz);
+    nx = nx-2;
+    ny = ny-2;
+    nz = nz-1;
     lon = new float[nx];
     lat = new float[ny];
     dep = new float[nz];
-    assert(fgets(line,sizeof(line),fp) != NULL);
-    sscanf(line,"%f%f",&uly,&ulx);
-    assert(fgets(line,sizeof(line),fp) != NULL);
-    sscanf(line,"%f%f",&dy,&dx);
+    std::getline(infile,line);
+    sscanf(line.c_str(),"%f%f",&uly,&ulx);
+    std::getline(infile,line);
+    sscanf(line.c_str(),"%f%f",&dy,&dx);
 
     // remove boundaries
-    ulx=ulx+dx;
-    uly=uly-dy;
-    x0=ulx;
-    y0=uly;
-    for(i=0;i<nx;i++)
-        lon[i]=ulx+i*dx;
-    for(i=0;i<ny;i++)
-        lat[i]=uly-i*dy;
+    ulx = ulx+dx;
+    uly = uly-dy;
+    x0 = ulx;
+    y0 = uly;
+    for(i = 0; i < nx; i ++) lon[i] = ulx + i * dx;
+    for(i = 0; i < ny; i ++) lat[i] = uly - i * dy;
 
     israd = 0;
 
@@ -178,15 +181,18 @@ read_model(const std::string &modfile)
     printf("%5d %5d %5d\n",ny,nx,nz);
 
     // read depth of velomodel
-    assert(fgets(line,sizeof(line),fp) != NULL);
-    char *starp = line,*endp = NULL;
+    std::getline(infile,line);
+    char *tmp = new char[line.size() + 1];
+    strcpy(tmp,line.c_str());
+    char *starp = tmp, *endp = NULL;
     for(int i = 0; i < nz; i ++) {
         dep[i] = std::strtof(starp,&endp);
         starp = endp;
     }
+    delete[] tmp;
 
     // close file
-    fclose(fp);
+    infile.close();
 }
 
 
@@ -406,11 +412,11 @@ void generate_gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
     for(int myrank = 0; myrank < nprocs; myrank ++) {
         // open tempory file to save gravmat 
         std::string filename = outfile + "." + std::to_string(myrank);
-        FILE *fp = fopen(filename.c_str(),"wb");
+        std::ofstream fp(filename,std::ios::binary);
 
         // write rows and cols of this matrix
-        fwrite(&np,sizeof(int),1,fp);
-        fwrite(&m,sizeof(int),1,fp);
+        fp.write((char*)&np,sizeof(int));
+        fp.write((char*)&m,sizeof(int));
 
         int starid,endid;
         int col[m];
@@ -432,14 +438,14 @@ void generate_gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
             }
 
             // write matrix to temporary file
-            fwrite(&i,sizeof(int),1,fp);
-            fwrite(&nar,sizeof(int),1,fp);
-            fwrite(col,sizeof(int),nar,fp);
-            fwrite(data,sizeof(float),nar,fp);
+            fp.write((char*)&i,sizeof(int));
+            fp.write((char*)&nar,sizeof(int));
+            fp.write((char*)col,sizeof(int) * nar);
+            fp.write((char*)data,sizeof(float) * nar);
         }
 
         // close temporary file
-        fclose(fp);
+        fp.close();
     }
 
     // merge files to one big file
