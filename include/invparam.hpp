@@ -1,7 +1,7 @@
-#pragma once 
+#ifndef JDSURFG_INVPARAM_H_
+#define JDSURFG_INVPARAM_H_
 
 #include <string>
-#include <array>
 
 class InverseParamsBase
 {
@@ -28,3 +28,5 @@ public:
 public:
     void read_file(const std::string &parafile);
 };
+
+#endif // end JDSURFG_INVPARAM_H_

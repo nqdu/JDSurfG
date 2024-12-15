@@ -87,7 +87,10 @@ void fdcoefs(int acc,float* __restrict__ coefs,int deriv)
     int norder = acc; 
     int d = deriv;
     int n = norder / 2;
-    assert(n * 2 == norder);
+    if(n * 2 != norder) {
+        printf("please make sure acc is an even number!\n");
+        exit(1);
+    }
 
     // allocate space 
     Eigen::MatrixXf A(norder+1,norder+1);
