@@ -18,7 +18,7 @@ INV_METHOD = 0
 # for LSMR-based inversion 
 SMOOTH = 15.0  # 2-nd Tikhonov regularization parameter
 DAMP = 0.01    # damping parameter for LSMR
-NTHREADS =  2  # # of threads used in LSMR solver 
+NTHREADS =  4  # # of threads used in LSMR solver 
 
 # for CG/LBFGS parameters 
 SMOOTH_IN_KM = 0 # smooth parameters are in km, or we smooth by assuming grid interval is 1 instead

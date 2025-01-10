@@ -105,5 +105,6 @@
         "compare": "cpp",
         "concepts": "cpp"
     },
-    "C_Cpp.default.compilerArgs": ["-Drestrict=__restrict"]
+    "C_Cpp.default.compilerArgs": ["-Drestrict=__restrict"],
+    "fortran.linter.modOutput": "${workspaceFolder}/obj"
 }

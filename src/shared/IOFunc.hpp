@@ -26,7 +26,7 @@ read_par_regex(const std::string &varname,T &var,std::ifstream &infile)
     infile.seekg(0);
 
     // temporary vars
-    std::string tempname = "^" + varname,dummy;
+    std::string tempname = "^" + varname + " ",dummy;
     std::istringstream info;
     int ierr = 1;
 

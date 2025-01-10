@@ -20,6 +20,11 @@ void LSMR_csr(int m, int n, float *val,int *indices,int *indptr,
         int *istop, int *itn, float *normA, float *condA, 
         float *normr, float *normAr, float *normx,int verbose,
         int num_threads);
+
+void myaprod_csr(int mode,float * __restrict x, float * __restrict y,
+                const int *indices,const int *indptr,int row,int col, 
+                const float *data,int nprocs);
+
 }
 
 void csr_matrix:: 
@@ -81,36 +86,21 @@ mode : 1.   compute y = y + A * x
 void csr_matrix:: 
 aprod(int mode,float *x, float *y) const
 {
-    if(mode == 1){ // y = y + A * x
-        for(int i=0;i<MATRIX_ROW;i++){
-        for(int j=indptr[i];j<indptr[i+1];j++){
-            y[i] += data[j] * x[indices[j]];
-        }}
-    }
-    else{
-        for(int i=0;i<MATRIX_ROW;i++){
-        for(int j=indptr[i];j<indptr[i+1];j++){
-            x[indices[j]] += data[j] * y[i];
-        }}
-    }
-}
+    // if(mode == 1){ // y = y + A * x
+    //     for(int i=0;i<MATRIX_ROW;i++){
+    //     for(int j=indptr[i];j<indptr[i+1];j++){
+    //         y[i] += data[j] * x[indices[j]];
+    //     }}
+    // }
+    // else{
+    //     for(int i=0;i<MATRIX_ROW;i++){
+    //     for(int j=indptr[i];j<indptr[i+1];j++){
+    //         x[indices[j]] += data[j] * y[i];
+    //     }}
+    // }
 
-/**
- * @brief convert cpp 0-based to fortran 1-based
- * 
- * @param inverse convert back
- */
-void csr_matrix::
-cpp2fort(bool inverse)
-{
-    if(!inverse){
-        for(int i=0;i<nonzeros;i++)indices[i] +=1;
-        for(int i=0;i<MATRIX_ROW+1;i++) indptr[i] +=1;
-    }
-    else{
-        for(int i=0;i<nonzeros;i++)indices[i] -=1;
-        for(int i=0;i<MATRIX_ROW+1;i++) indptr[i] -=1;
-    }
+    myaprod_csr(mode,x,y,this->indices,this->indptr,MATRIX_ROW,
+                MATRIX_COL,this->data,1);
 }
 
 /**
@@ -121,12 +111,11 @@ cpp2fort(bool inverse)
  * @param dict 
  */
 void csr_matrix:: 
-lsmr_solver(float *x,const float *b,LSMRDict<float> &dict)
+lsmr_solver(float *x,const float *b,LSMRDict<float> &dict) const 
 {
 
     // initialize x
     for(int i=0;i<MATRIX_COL;i++) x[i] = 0.0;
-    this -> cpp2fort();
 
     // solve by lsmr module
     int show = 1;
@@ -136,7 +125,6 @@ lsmr_solver(float *x,const float *b,LSMRDict<float> &dict)
         dict.conlim,dict.itnlim,dict.localSize,x,&dict.istop,
         &dict.itn,&dict.anorm,&dict.acond,&dict.rnorm,
         &dict.arnorm,&dict.xnorm,show,dict.num_threads);
-    this -> cpp2fort(true);
 }
 
 /**

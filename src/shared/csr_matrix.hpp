@@ -71,9 +71,7 @@ public:
     int rows() const;
     int cols() const;
 
-    void cpp2fort(bool inverse=false);
-
-    void lsmr_solver(float *x,const float *b,LSMRDict<float> &dict);
+    void lsmr_solver(float *x,const float *b,LSMRDict<float> &dict) const;
 
     void read_binary(const std::string &filename);
     void write_binary(const std::string &filename) const;

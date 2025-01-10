@@ -74,101 +74,32 @@ module lsmr_csr_matrix
 use,intrinsic :: iso_c_binding
 implicit none
 
-contains
-
-subroutine aprod(mode, m, n, x, y,val,indices,indptr)
-   use lsmrDataModule, only : dp
+interface aprod_funcs
+subroutine myaprod_csr(mode,x,y,indices,indptr,row,col,val,nprocs) bind(c,name="myaprod_csr")
    use,intrinsic :: iso_c_binding
    implicit none
-   integer(c_int),intent(in) :: mode,m,n
-   integer(c_int),INTENT(IN) :: indices(*),indptr(*)
-   real(dp),INTENT(IN)       :: val(*)
-   real(dp),INTENT(INOUT) :: x(n),y(m)
+   integer,PARAMETER                :: dp = c_float
+   integer(c_int),value,intent(in)  :: mode,row,col,nprocs
+   integer(c_int),INTENT(IN)        :: indices(*),indptr(*)
+   real(dp),INTENT(IN)              :: val(*)
+   real(dp),INTENT(INOUT)           :: x(col),y(row)
+end subroutine myaprod_csr
+end interface 
 
-   integer i,j;
-
-   if(mode == 1) then
-      do i=1,m
-         do j=indptr(i),indptr(i+1)-1
-            y(i) = y(i) + val(j) * x(indices(j))
-         enddo
-      enddo
-   else
-      do i=1,m
-         do j=indptr(i),indptr(i+1)-1
-            x(indices(j)) = x(indices(j)) + val(j) * y(i)
-         enddo
-      enddo
-   endif
-end subroutine aprod
+contains
 
 subroutine aprod_parallel(mode, m, n, x, y,val,indices,indptr,nprocs)
    !!compute y = y + A *x or x = x + A.T * y 
    !! parallel version
-   use,intrinsic :: iso_c_binding
-   use omp_lib
+   use,intrinsic :: iso_c_binding 
    implicit none
    integer,PARAMETER         :: dp = c_float
-   integer(c_int),intent(in) :: mode,m,n
+   integer(c_int),intent(in) :: mode,m,n,nprocs
    integer(c_int),INTENT(IN) :: indices(*),indptr(*)
    real(dp),INTENT(IN)       :: val(*)
    real(dp),INTENT(INOUT)    :: x(n),y(m)
 
-   ! local
-   integer(c_int),value         :: nprocs
-   real(dp),ALLOCATABLE      :: xtmp(:,:),ytmp(:,:)
-   integer i,j;
-   integer rank,nprocs_bak
-
-   ! check nthreads
-   if(nprocs == 1) then 
-      call aprod(mode,m,n,x,y,val,indices,indptr)
-      RETURN;
-   endif
-
-   ! back up global nprocs
-   !$omp parallel
-   nprocs_bak = omp_get_num_threads()
-   !$omp end parallel
-
-   ! allocate space
-   if(mode == 1) then 
-      allocate(ytmp(m,nprocs))
-   else 
-      allocate(xtmp(n,nprocs))
-   endif
-
-   call omp_set_num_threads(nprocs)
-   !$omp parallel do shared(mode,m,n,val,indices,indptr,xtmp) private(i,j,rank)
-   do rank=1,nprocs
-      if(mode == 1) then 
-         ytmp(:,rank) = 0.0 
-         do i=rank,m,nprocs
-            do j=indptr(i),indptr(i+1)-1
-               ytmp(i,rank) = ytmp(i,rank) + val(j) * x(indices(j))
-            enddo
-         enddo
-      else 
-         xtmp(:,rank) = 0.0
-         do i=rank,m,nprocs
-            do j=indptr(i),indptr(i+1)-1
-               xtmp(indices(j),rank) = xtmp(indices(j),rank) + val(j) * y(i)
-            enddo
-         enddo
-      endif
-   enddo
-   !$omp end parallel do
-
-   if(mode == 1) then 
-      y = y + sum(ytmp,dim=2)
-      DEALLOCATE(ytmp)
-   else 
-      x = x + sum(xtmp,dim=2)
-      DEALLOCATE(xtmp)
-   endif
-
-   ! set environ var back
-   call omp_set_num_threads(nprocs_bak)
+   call myaprod_csr(mode,x,y,indices,indptr,m,n,val,nprocs)
    
 end subroutine aprod_parallel
 
@@ -588,7 +519,7 @@ subroutine LSMR(m,n,val,indices,indptr,b, damp,atol, btol, conlim, itnlim, &
 !subroutine LSMR  ( m, n, leniw, lenrw,iw,rw, b, damp,               &
 !                     atol, btol, conlim, itnlim, localSize, nout,      &
 !                     x, istop, itn, normA, condA, normr, normAr, normx )
-   use lsmr_csr_matrix,only      : aprod,aprod_parallel
+   use lsmr_csr_matrix,only      : aprod_parallel
    integer(c_int),value, intent(in) :: m,n,verbose,num_threads
    integer(c_int), INTENT(IN) :: indices(*),indptr(*)
    real(dp),INTENT(IN) :: val(*)

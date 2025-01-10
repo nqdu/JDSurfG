@@ -36,10 +36,10 @@
     "type": "cppdbg",
     "request": "launch",
     "program": "${workspaceFolder}/bin/DSurfTomo",
-    "args":["JSurfG.in","surfdataSC.dat","obsgrav.dat","gravmat.bin","MOD","MOD","MOD.true"],
+    "args":["DSurfTomo.in","surfdataSC.dat","MOD","MOD.true"],
     "stopAtEntry": false,
-    "cwd":"${workspaceFolder}/example.bak",
-    "miDebuggerPath": "/usr/bin/lldb",
+    "cwd":"${workspaceFolder}/example",
+    //"miDebuggerPath": "/usr/bin/lldb",
     "setupCommands": [
         {
             "description": "Enable pretty-printing for gdb",
@@ -53,3 +53,21 @@
         }
     ]
 }
+
+// {
+//     "version": "0.2.0",
+//     "configurations": [
+//     {
+//         "name": "(lldb) Launch",
+//         "type": "cppdbg",
+//         "request": "launch",
+//         "program": "enter program name, for example ${workspaceFolder}/a.out",
+//         "args": [],
+//         "stopAtEntry": false,
+//         "cwd": "${fileDirname}",
+//         "environment": [],
+//         "externalConsole": false,
+//         "MIMode": "lldb"
+//     }
+//     ]
+// }
