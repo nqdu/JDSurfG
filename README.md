@@ -1,8 +1,8 @@
 # Joint Inversion of Direct Surface Wave Tomography and Bouguer Gravity
-Version 4.0. It's a major update including several new features!
+Version 4.1
 
 ## Note
-Please note that the format of the input files are a little different from previous versions!
+Please note that the format of the input files after `v4.0` are a little different from previous versions!
 
 ## New Features
 * More accurate group velocity ray-tracing implementation in `fmst` package.
@@ -10,6 +10,7 @@ Please note that the format of the input files are a little different from previ
 * High order dispersion data can be included.
 
 ## Updates
+* Fix bugs in file reading.
 * Update parameter files, docs and references.
 * Use binary file for saving gravity matrix.
 * More readable framework.
