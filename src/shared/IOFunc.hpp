@@ -1,5 +1,5 @@
-#ifndef _JDSURFG_IOFUNC_H
-#define _JDSURFG_IOFUNC_H
+#ifndef JDSURFG_SHARED_IOFUNC_H_
+#define JDSURFG_SHARED_IOFUNC_H_
 
 #include <fstream>
 #include <regex.h>
@@ -26,7 +26,7 @@ read_par_regex(const std::string &varname,T &var,std::ifstream &infile)
     infile.seekg(0);
 
     // temporary vars
-    std::string tempname = "^" + varname,dummy;
+    std::string tempname = "^" + varname + " ",dummy;
     std::istringstream info;
     int ierr = 1;
 
@@ -110,4 +110,4 @@ read_par_regex<std::string>(const std::string &varname,std::string &var,
     return ierr;
 }
 
-#endif
+#endif // end JDSURFG_SHARED_IOFUNC_H_

@@ -1,7 +1,7 @@
 # DSurfTomo inversion Parameters
 
 # # of iterations
-NITERS =  16
+NITERS =  1
 ITER_CURRENT = 0 # current iteration
 
 #  minimum velocity, maximum velocity in km/s
@@ -13,12 +13,12 @@ SYN_TEST = 1                # synthetic flag(0:real data,1:synthetic)
 NOISE_LEVEL = 1.5          #  noise level, std value of gaussian noise
 
 # inverse method: LSMR = 0 CG = 1 LBFGS = 2
-INV_METHOD = 2
+INV_METHOD = 0
 
 # for LSMR-based inversion 
 SMOOTH = 15.0  # 2-nd Tikhonov regularization parameter
 DAMP = 0.01    # damping parameter for LSMR
-NTHREADS =  2  # # of threads used in LSMR solver 
+NTHREADS =  4  # # of threads used in LSMR solver 
 
 # for CG/LBFGS parameters 
 SMOOTH_IN_KM = 0 # smooth parameters are in km, or we smooth by assuming grid interval is 1 instead

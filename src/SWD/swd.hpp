@@ -1,4 +1,6 @@
-#pragma once
+#ifndef JDSURFG_SWD_SWD_H_
+#define JDSURFG_SWD_SWD_H_
+
 #include <iostream>
 extern "C"{
 
@@ -108,3 +110,5 @@ void groupvel_l(const float *thk,const float *vs,const float *rho,
 void groupvel_r(const float *thk,const float *vp,const float *vs,
                 const float *rho,int nlayer,const double *t,
                 double *cg,int kmax,int mode=0,bool sphere=false);             
+
+#endif // end JDSURFG_SWD_SWD_H_

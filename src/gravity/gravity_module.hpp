@@ -1,6 +1,8 @@
-#pragma once
-#include<iostream>
-#include<string>
+#ifndef JDSURFG_GRAVITY_GRAVITY_MODULE_H_
+#define JDSURFG_GRAVITY_GRAVITY_MODULE_H_
+
+#include <iostream>
+#include <string>
 
 //=== Random observation system, all variables are in Observation-Centred Coordinate System
 class OBSSphGraRandom{
@@ -45,3 +47,5 @@ class MOD3DSphGra{
 
 void generate_gravmat(MOD3DSphGra &mod3dsphgra,OBSSphGraRandom &ObsSphGra,
                       const std::string &outfile);
+
+#endif // end JDSURFG_GRAVITY_GRAVITY_MODULE_H_

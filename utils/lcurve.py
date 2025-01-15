@@ -20,7 +20,7 @@ def add_regularization(nx,ny,nz,indices,indptr,data):
                     rwc = count + m
                     data[nar] = 2.0
                     indices[nar] = k * (ny -2) * (nx -2) + j * (nx -2) + i
-                    indptr[rwc + 1] = indptr[rwc]
+                    indptr[rwc + 1] = indptr[rwc] + 1
                     nar += 1
                     count += 1
                     continue

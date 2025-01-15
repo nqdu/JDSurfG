@@ -1,5 +1,8 @@
-#pragma once 
+#ifndef JDSURFG_SWD_SURFACEWAVE_H_
+#define JDSURFG_SWD_SURFACEWAVE_H_
+
 #include "numerical.hpp"
+#include <string>
 
 // FMST extensions
 extern "C"{
@@ -111,3 +114,5 @@ public:
     void set_model(const fvec &dep,float goxd,float gozd,float dvxd,float dvzd);
     void read_swd_data(const std::string &datafile);
 };
+
+#endif // end JDSURFG_SWD_SURFACEWAVE_H_

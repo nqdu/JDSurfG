@@ -1,5 +1,4 @@
 #include <iostream>
-#include <assert.h>
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -17,7 +16,7 @@ create_directory(const char *dirname)
 }
 
 /**
- * print progress bar to the screen
+ * @brief print progress bar to the screen
  * @param percentage percentage of current progress
 */
 void print_progressbar(float percentage) {

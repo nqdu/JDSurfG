@@ -1,4 +1,5 @@
-#include<math.h>
+#include <cmath>
+
 const double pi = M_PI;
 /*
     Convert geographic latitude to geocentric latitude

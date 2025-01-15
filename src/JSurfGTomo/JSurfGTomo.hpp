@@ -1,4 +1,6 @@
-#pragma once
+#ifndef JDSURFG_JSURFGTOMO_JSURFGTOMO_H_
+#define JDSURFG_JSURFGTOMO_JSURFGTOMO_H_
+
 
 #include "numerical.hpp"
 #include "invparam.hpp"
@@ -53,3 +55,5 @@ public:
     void compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const;
     void smoothing(fvec &grad) const;
 };
+
+#endif // end JDSURFG_JSURFGTOMO_JSURFGTOMO_H_

@@ -100,7 +100,11 @@
         "execution": "cpp",
         "ios": "cpp",
         "locale": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "numbers": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp"
     },
-    "C_Cpp.default.compilerArgs": ["-Drestrict=__restrict"]
+    "C_Cpp.default.compilerArgs": ["-Drestrict=__restrict"],
+    "fortran.linter.modOutput": "${workspaceFolder}/obj"
 }

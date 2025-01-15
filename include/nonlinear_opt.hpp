@@ -1,4 +1,6 @@
-#pragma once 
+#ifndef JDSURFG_NONLINEAR_OPT_H_
+#define JDSURFG_NONLINEAR_OPT_H_
+
 #include "numerical.hpp"
 #include <fstream>
 
@@ -308,3 +310,5 @@ public:
     }
 
 };
+
+#endif // end JDSURFG_NONLINEAR_OPT_H_

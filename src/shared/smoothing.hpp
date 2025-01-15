@@ -1,4 +1,6 @@
-#pragma once
+#ifndef JDSURFG_SHARED_SMOOTHING_H_
+#define JDSURFG_SHARED_SMOOTHING_H_
+
 
 #include "numerical.hpp"
 void smooth_cart_pde(float* grad,int nx,int ny,int nz,float sigma_h,float sigma_v);
@@ -12,3 +14,5 @@ void smooth_sph(float* grad,int nx,int ny,int nz,
                 float sigma_h,float sigma_v);
 void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
                         int nx,int ny,int nz, int nz1,const float *dep,bool fwd);
+
+#endif // end JDSURFG_SHARED_SMOOTHING_H_
