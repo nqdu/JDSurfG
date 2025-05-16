@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/Users/nqdu/software/eigen-3.4.0", 
+                "~/software/eigen-3.4.0", 
                 "/opt/homebrew/Cellar/libomp/19.1.4/include"
             ],
             "compilerPath": "/usr/bin/g++ ",
