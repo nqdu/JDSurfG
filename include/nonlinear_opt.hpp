@@ -22,7 +22,8 @@ private:
 
     // line search parameters
     const float WOLFE_M1 = 1.0E-4;
-    const float WOLFE_M2 = 0.9;
+    const float WOLFE_BFGS_M2 = 0.9;
+    const float WOLFE_CG_M2 = 0.1;
     float STEP_L, STEP_R;
     const float FACTOR = 10.;
 
@@ -330,8 +331,11 @@ public:
             float q1 = (grad_next * direc).sum();
 
             // check WOLFE condition
-            bool cond1 = fcost1 <= (fcost + WOLFE_M1 * STEP_FAC * q);
-            bool cond2 = q1 >= WOLFE_M2 * q;
+            float m1 = WOLFE_M1;
+            float m2 = WOLFE_BFGS_M2;
+            if(method == "CG") m2 = WOLFE_CG_M2;
+            bool cond1 = fcost1 <= (fcost + m1 * STEP_FAC * q);
+            bool cond2 = q1 >= m2 * q;
 
             if (cond1 && cond2) {
                 printf("Wolfe condition is satisfied!\n");
