@@ -1,2 +1,2 @@
-RESULT_DIR=../resultsJ/
-MODEL=20
+RESULT_DIR=../results/
+MODEL=9

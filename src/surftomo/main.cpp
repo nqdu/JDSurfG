@@ -74,7 +74,7 @@ int main(int argc, char* argv[]){
 
     // inversion begin
     std::string info;
-    NonlinOPT<DSurfTomo> opt(outdir,param.MAX_REL_STEP,param.iter_start);
+    NonlinOPT<DSurfTomo> opt(outdir,param.MAX_REL_STEP,param.iter_start,param.iter_cur);
     for(int ii = 0; ii < param.maxiter;ii ++){
         int iter = ii + param.iter_cur;
         printf("\n");
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]){
             if(param.inv_method == 2) {
                 method = "LBFGS";
             }
-            opt.update(iter,tomo,x,dsyn,method);
+            opt.update(tomo,x,dsyn,method);
 
             // update vsf
             int ic = 0;
