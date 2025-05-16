@@ -167,7 +167,7 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
 
 - **`NOISE_LEVEL`**  
   Gaussian noise level added to synthetic data. Defined as:  
-  $$ d_{obs}^i = d_{syn}^i + \text{noiselevel} \times \mathcal{N}(0, 1) $$
+  ```math d_{obs}^i = d_{syn}^i + \text{noiselevel} \times \mathcal{N}(0, 1) ```
 
 - **`INV_METHOD`**  
   Select the inversion method:
@@ -186,17 +186,17 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
 
 - **`SIGMA_H`, `SIGMA_V`**  
   Gaussian smoothing parameters for horizontal and vertical directions. The search direction is smoothed using:  
-  $$
+  ```math
   \bar{g}(\mathbf{x}) = \frac{1}{W(\mathbf{x})} \int_V g(\mathbf{x}) e^{-\frac{1}{2} \mathbf{x}^T \Sigma^{-1} \mathbf{x}} \, dV
-  $$
+  ```
   where the normalization factor is:  
-  $$
+  ```math
   W(\mathbf{x}) = \int_V e^{-\frac{1}{2} \mathbf{x}^T \Sigma^{-1} \mathbf{x}} \, dV
-  $$
+  ```
   and  
-  $$
+  ```math
   \Sigma = \text{Diag}[\sigma_h^2, \sigma_h^2, \sigma_v^2]
-  $$
+  ```
   If `SMOOTH_IN_KM = 1`, then \( \sigma_h, \sigma_v \) are in kilometers and \( \mathbf{x} \) represents spatial coordinates; otherwise, they are in grid indices.
 
 - **`ITER_START`**  
@@ -368,7 +368,7 @@ The weighted cost function for the joint inversion problem, as described in [Jul
  L = \frac{p}{N_1 \sigma_1^2}\sum_{i=1}^{N_1} (d_{1,i}- 
         d_{1,i}^o)^2 +   
         \frac{1-p}{N_2 \sigma_2^2} \sum_{i=1}^{N_2}
-        (d_{2,i}- d_{2,i}^o)^2 \tag{1}
+        (d_{2,i}- d_{2,i}^o)^2
 ```
 where $\mathbf{d}_{1,2}$ is the data vector for each dataset. $N_{1,2}$
 is the size of each dataset and $\sigma_{1,2}$ (The `WEIGTH_SWD` and `WEIGHT_GRAV` in `JointSG.in`) is the corresponding
