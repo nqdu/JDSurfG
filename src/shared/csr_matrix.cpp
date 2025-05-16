@@ -179,7 +179,7 @@ write_binary(const std::string &filename) const
     // open file
     std::ofstream fp(filename,std::ios::binary);
     if(!fp.is_open()){
-        printf("cannot open file %s\n",filename);
+        printf("cannot open file %s\n",filename.c_str());
         exit(1);
     } 
 

@@ -46,7 +46,7 @@ gmt surface out.true.dat -Gout.true.grd -I$dx/$dy  -R$region -Vq
 vmin=`gmt grdinfo -C out.true.grd |awk '{print $6}'`
 vmax=`gmt grdinfo -C out.true.grd  |awk '{print $7}'`
 echo $vmin $vmax
-gmt makecpt -Cturbo -T$vmin/$vmax/100+n -D -Z -I > out.cpt
+gmt makecpt -Cvik -T$vmin/$vmax/100+n -D -Z -I > out.cpt
 
 proj=-JX12c/-6c
 

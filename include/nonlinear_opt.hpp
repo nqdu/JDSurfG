@@ -14,18 +14,37 @@
 */
 template <class T> 
 class NonlinOPT {
+
+private:
+    std::string FLAG;
+    int ITER_LS = 0;
+    const float MSTORE = 5;
+
+    // line search parameters
+    const float WOLFE_M1 = 1.0E-4;
+    const float WOLFE_BFGS_M2 = 0.9;
+    const float WOLFE_CG_M2 = 0.1;
+    float STEP_L, STEP_R;
+    const float FACTOR = 10.;
+
 public:
     std::string result_dir;
     float MAX_STEP;
     int ITER_START;
-    const int m_store = 5;
-    const float Armijo_TOL = 0.01; 
+    int ITER;
+    float STEP_FAC;
 
-    NonlinOPT(const std::string &outdir,float max_step,int iter_start)
+    NonlinOPT(const std::string &outdir,float max_step,int iter_start,int iter_current)
     {
         this -> result_dir = outdir;;
         this -> MAX_STEP = max_step;
         this -> ITER_START = iter_start;
+        this -> ITER_LS = 0;
+        this -> FLAG = "INIT";
+        this -> STEP_FAC = -1.;
+        this -> ITER = iter_current;
+        STEP_L = 0.;
+        STEP_R = 0.;
     }
 
 private:
@@ -70,17 +89,13 @@ private:
         this -> write_vector(direc,filename);
     }
 
-    void get_lbfgs_direction(int iter, const fvec &x, 
-                                fvec &direc) const 
+    void get_lbfgs_direction(int iter,fvec &direc) const 
     {
         std::string file;
 
         // save current log model
-        int n = x.size();
+        int n = direc.size();
         fvec x1(n),x0(n);
-        file = result_dir + "/logmd" + std::to_string(iter) + ".bin";
-        x1 = x.log();
-        this -> write_vector(x1,file);
         x1.setZero();
 
         // check if iter_start = iter 
@@ -95,7 +110,7 @@ private:
         fvec a(1000),p(1000);
         fvec grad1(n),grad0(n);
         fvec grad_diff(n),x_diff(n), q_vec(n),r_vec(n);
-        int iter_store = iter - m_store; 
+        int iter_store = iter - MSTORE; 
         if(iter_store <= ITER_START) iter_store = ITER_START;
 
         // variables used
@@ -183,39 +198,22 @@ private:
         return theta;
     }
 
-public:
-    void update(int iter,T &mod,fvec &x,fvec &dsyn,
-                const std::string &method = "CG")
+    fvec get_next_model(T &mod,const fvec &grad,const fvec &x,float chi, 
+                        const std::string &method, fvec &direc)
     {
-        int n = x.size(); // length 
-
-        // compute current gradient, read previous one if required 
-        fvec grad(n);
-        mod.compute_grad(x,dsyn,grad);
-        float chi = mod.compute_misfit(dsyn);
-        int m = dsyn.size();
-
-        // save current grad
-        std::string file = result_dir + "/grad" + std::to_string(iter) + ".bin";
-        this -> write_vector(grad,file);
-
-        // get search direction
-        fvec direc(n);
+        int iter = ITER;
         if(method == "CG") {
             this -> get_cg_direction(iter,grad,direc);
         }
         else {
-            this -> get_lbfgs_direction(iter,x,direc);
+            this -> get_lbfgs_direction(iter,direc);
         }
-        
+
         // check if the angle between 
         if(iter != ITER_START) {
             fvec invgrad = -grad;
             float theta = this -> get_angle(direc,invgrad);
-            if(theta <= 90 && theta >= 0.) {
-                printf("The search direction is accepted!\n");
-            }
-            else {
+            if(theta > 92 ) {
                 printf("The search direction is not accepted! theta = %f\n",theta);
                 printf("use negative grad instead\n");
                 printf("ITER_START reset  = %d\n",iter);
@@ -226,89 +224,169 @@ public:
             }
         }
 
-        // smoothing
+        // smooth the search direction
         mod.smoothing(direc);
 
-        // line search 
-        printf("line searching ...\n");
+        // max of abs(direc)
         float dmax = direc.abs().maxCoeff();
 
-        // estimate test line step
-        float g1 = (grad * direc).sum();
-        float step_fac; 
-        if(method == "CG"){
-            step_fac = -2. / g1 * chi;
+        // initialize step_fac 
+        float step_fac = STEP_FAC;
+        if((iter == ITER_START) && (ITER_LS == 0)) {
+            step_fac = -1.;
         }
-        else {
-            step_fac = 1.;
+        if((iter == ITER_START + 1) && (ITER_LS == 0) ) {
+            if(method == "CG") {
+                float g1 = (grad * direc).sum();
+                step_fac = -2. / g1 * chi;
+            }
+            else {
+                step_fac = 1.;
+            }
         }
         
         // make sure the step fac is less than 3%
-        if(std::abs(step_fac) * dmax > MAX_STEP || iter == ITER_START) {
-            step_fac = MAX_STEP / dmax * step_fac / std::abs(step_fac);
+        if(step_fac < 0 || step_fac * dmax > MAX_STEP ) {
+            step_fac = MAX_STEP / dmax;
         }
-        printf("use trial step = %g, model relative variation in percent: %g\n",
-                step_fac,step_fac * dmax);
+        printf("use trial step = %g, dmax = %g, relative change = %g\n",
+                step_fac,dmax,step_fac * dmax);
 
-        // compute misfit at the new point
-        float chi1 = 0.;
-        bool backtrack = true, interp_step = false;
-        while(backtrack) {
-            fvec x1 = x * (step_fac * direc).exp();
-            fvec dsyn1;
-            mod.forward(x1,dsyn1);
-            chi1 = mod.compute_misfit(dsyn1);
+        // reset STEP_FAC
+        STEP_FAC = step_fac;
 
-            // check if Armijo condition is satisfied
-            if(chi1 <= chi + Armijo_TOL * step_fac * g1) {
-                backtrack = false;
-                interp_step = false;
-            }
-            else if(chi1 < chi){
-                backtrack = false;
-                interp_step = true;
-            }
-            else { // chi1 > chi
-                backtrack = true;
-                interp_step = false;
-            }
+        // get next line search model
+        fvec x1 = x * (STEP_FAC * direc).exp();
 
-            if(!backtrack) {
-                printf("line search success: two misfits = %g %g\n",chi,chi1);
-            }
-            else{
-                step_fac *= 0.5;
-                printf("line search failed: two misfits= %g %g\n",chi,chi1);
-                printf("backtrack new step = %g relative variation = %g\n",step_fac,step_fac * dmax);
-            }
+        // update flags
+        if(FLAG != "LS") {
+            FLAG = "LS";
+            ITER_LS = 0;
         }
 
-        // interp new step_fac if required 
-        float alpha,chimax;
-        if(interp_step) {
-            float a = (chi1 - chi - g1 * step_fac) / (step_fac * step_fac);
-            float b = g1, c = chi;
-            alpha = -b / (2. * a);
-
-    	    // check alpha
-    	    if (alpha > step_fac || alpha < 0) {
-    	    	alpha = step_fac;
-    		      chimax = chi1;
-    	    }
-    	    else{
-                chimax = a * alpha * alpha + b * alpha + c;
-    	    }
-        }
-        else {
-            alpha = step_fac;
-            chimax = chi1;
-        }
-        
-        printf("line search finished: step = %g relvar = %g misfit = %g\n",alpha,
-                alpha*dmax,chimax);
-        x = x * (alpha * direc).exp();
+        return x1;
     }
 
+public:
+    void update(T &mod,fvec &x,fvec &dsyn,
+                const std::string &method = "CG")
+    {
+        int n = x.size(); // length 
+        fvec grad(n),direc(n); // gradient and search direction
+        fvec x1;
+
+        // run optimization
+        if (FLAG == "INIT") {
+            // compute gradient 
+            mod.compute_grad(x,dsyn,grad);
+
+            // save current grad,logmod and dsyn
+            std::string file = result_dir + "/grad" + std::to_string(ITER) + ".bin";
+            this -> write_vector(grad,file);
+
+            // model
+            file = result_dir + "/logmd" + std::to_string(ITER) + ".bin";
+            x1 = x.log();
+            this -> write_vector(x1,file);
+
+            // read current dsyn
+            file = result_dir + "/syn" + std::to_string(ITER) + ".bin";
+            this -> read_vector(dsyn,file);
+        }
+        else if(FLAG == "GRAD") {
+            // read current grad
+            std::string file = result_dir + "/grad" + std::to_string(ITER) + ".bin";
+            this -> read_vector(grad,file);
+
+            // read current dsyn
+            file = result_dir + "/syn" + std::to_string(ITER) + ".bin";
+            this -> read_vector(dsyn,file);
+        }
+
+        // compute misift
+        float fcost = mod.compute_misfit(dsyn);
+
+        // get next model
+        x1 = get_next_model(mod,grad,x,fcost,method,direc);
+
+        // now do line search
+        while (FLAG  == "LS") {
+            printf("Line search begin, ITER_LS =  %d\n",ITER_LS);
+
+            // compute gradient 
+            fvec grad_next, dsyn_next;
+            mod.compute_grad(x1,dsyn_next,grad_next);
+            
+            // reset LS parameters if required
+            if (ITER_LS == 0) {
+                STEP_L = 0.;
+                STEP_R = 0.;
+            }
+
+            // get misifit for new model
+            float fcost1 = mod.compute_misfit(dsyn_next);
+
+            // compute inner prodcut
+            float q = (grad * direc).sum();
+            float q1 = (grad_next * direc).sum();
+
+            // check WOLFE condition
+            float m1 = WOLFE_M1;
+            float m2 = WOLFE_BFGS_M2;
+            if(method == "CG") m2 = WOLFE_CG_M2;
+            bool cond1 = fcost1 <= (fcost + m1 * STEP_FAC * q);
+            bool cond2 = q1 >= m2 * q;
+
+            if (cond1 && cond2) {
+                printf("Wolfe condition is satisfied!\n");
+                printf("misfits current/next = %g %g\n",fcost,fcost1);
+                FLAG = "GRAD";
+                ITER += 1;
+                ITER_LS = 0;
+
+                // save gradient and data of next model 
+                std::string file = result_dir + "/grad" + std::to_string(ITER) + ".bin";
+                this -> write_vector(grad_next,file);
+                file = result_dir + "/syn" + std::to_string(ITER) + ".bin";
+                this -> write_vector(dsyn_next,file);
+
+                // copy x1 to updated model
+                x = x1;
+
+                // save model
+                file = result_dir + "/logmd" + std::to_string(ITER) + ".bin";
+                x1 = x.log();
+                this -> write_vector(x1,file);
+
+                // end line search
+                break;
+            }
+            else if(!cond1) {
+                STEP_R = STEP_FAC;
+                STEP_FAC = 0.5 * (STEP_R + STEP_L);
+                ITER_LS += 1;
+
+                printf("First Wolfe condition is not satisfied\n");
+                printf("decrease step_fac to %g\n",STEP_FAC);
+            }
+            else if(!cond2) {
+                STEP_L = STEP_FAC;
+                if(STEP_R != 0.) {
+                    STEP_FAC = 0.5 * (STEP_L + STEP_R);
+                }
+                else {
+                    STEP_FAC *= FACTOR;
+                }
+                ITER_LS += 1;
+
+                printf("Second Wolfe condition is not satisfied\n");
+                printf("increase step_fac to %g\n",STEP_FAC);
+            }
+
+            // get next model if required
+            x1 = get_next_model(mod,grad,x,fcost,method,direc);
+        }
+    }
 };
 
 #endif // end JDSURFG_NONLINEAR_OPT_H_

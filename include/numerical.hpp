@@ -1,6 +1,10 @@
 #ifndef JDSURFG_NUMERICAL_H_
 #define JDSURFG_NUMERICAL_H_
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 #include <unsupported/Eigen/CXX11/Tensor>
 
 typedef Eigen::Array<float,-1,-1> fmat2;
