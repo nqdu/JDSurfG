@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ####################################
 # This script is used to get different depth Vs.
 #################################### 
@@ -49,5 +49,29 @@ do
         initgrd=grd/depth.$dep.init.grd
         gmt grdmath grd/depth.$dep.true.grd $initgrd  SUB $initgrd DIV 100 MUL = grd/diff.$dep.true.grd
         gmt grdmath grd/depth.$dep.surf.grd $initgrd  SUB $initgrd DIV 100 MUL = grd/diff.$dep.surf.grd
+
+        # colorbar 
+        vmin=`gmt grdinfo -C grd/diff.$dep.surf.grd|awk '{print $6}'`
+        vmax=`gmt grdinfo -C grd/diff.$dep.surf.grd|awk '{print $7}'`
+        gmt makecpt -Cpolar -T-10/10/100+n -D -Z -I > out.cpt
+
+
+        # plot checkerbaord
+        gmt begin depth_$dep jpg 
+            gmt basemap -R$region -JM12c -Bxaf -Byaf 
+            gmt grdimage grd/diff.$dep.surf.grd -E200 -Cout.cpt 
+
+            # stations
+            cat $RESULT_DIR/res_swd0.dat |awk '{print $5,$4}' |gmt plot -St0.2c -Gblack
+            cat $RESULT_DIR/res_swd0.dat |awk '{print $3,$2}' |gmt plot -St0.2c -Gblack
+            
+
+            gmt basemap -R$region -JM12c -Bxaf -Byaf  -X14c
+            gmt grdimage grd/diff.$dep.true.grd -E200 -Cout.cpt 
+            cat $RESULT_DIR/res_swd0.dat |awk '{print $5,$4}' |gmt plot -St0.2c -Gblack
+            cat $RESULT_DIR/res_swd0.dat |awk '{print $3,$2}' |gmt plot -St0.2c -Gblack
+
+            gmt colorbar -Bxaf -Cout.cpt -X-7c
+        gmt end 
     fi 
 done

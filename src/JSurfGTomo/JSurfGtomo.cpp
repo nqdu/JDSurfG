@@ -119,21 +119,27 @@ read_model(const std::string &modfile,const std::string &modtrue,
     }
 
     // read true model if required
-    if(modtrue != "None") {
-        vstrue.resize(nx,ny,nz);
-        infile.open(modtrue);
-        if(!infile.is_open()) {
-            printf("cannot open %s\n",modtrue.c_str());
+    if(param.ifsyn) {
+        if(modtrue != "None") {
+            vstrue.resize(nx,ny,nz);
+            infile.open(modtrue);
+            if(!infile.is_open()) {
+                printf("cannot open %s\n",modtrue.c_str());
+                exit(1);
+            }
+            getline(infile,line); getline(infile,line); getline(infile,line);
+            getline(infile,line);
+            for(int k=0;k<nz;k++){
+            for(int j=0;j<ny;j++){
+            for(int i=0;i<nx;i++){
+                infile >> vstrue(i,j,k);
+            }}}
+            infile.close();
+        }
+        else {
+            printf("You should input a trumodel file (e.g. MOD.true)! when enabling SYN_TEST \n");
             exit(1);
         }
-        getline(infile,line); getline(infile,line); getline(infile,line);
-        getline(infile,line);
-        for(int k=0;k<nz;k++){
-        for(int j=0;j<ny;j++){
-        for(int i=0;i<nx;i++){
-            infile >> vstrue(i,j,k);
-        }}}
-        infile.close();
     }
 
     // read ref model if required

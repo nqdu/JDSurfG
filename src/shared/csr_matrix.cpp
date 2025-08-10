@@ -143,7 +143,7 @@ read_binary(const std::string &filename)
 
     // read nonzeros/rows in this block
     nar1 = 0;
-    while(!fp.read((char*)&idx,sizeof(int))) {
+    while(fp.read((char*)&idx,sizeof(int))) {
         fp.read((char*)&nar,sizeof(int));
         nar1 += nar;
         
@@ -161,7 +161,7 @@ read_binary(const std::string &filename)
     fp.open(filename,std::ios::binary);
     fp.read((char*)&m,sizeof(int));
     fp.read((char*)&n,sizeof(int));
-    while(!fp.read((char*)&idx,sizeof(int))){
+    while(fp.read((char*)&idx,sizeof(int))){
         fp.read((char*)&nar,sizeof(int));
         int start = indptr[idx];
         indptr[idx + 1] = nar + start;
