@@ -83,21 +83,15 @@ void surfdisp(const float *thk,const float *vp,const float *vs,const float *rho,
         igr = 1;
     }
     else{
-        std::cout <<"swdtp should be one of [Rc,Rg,Lc,Lg]"<<std::endl;
-        exit(0);
+        std::cout <<"swdtp should be one of [Rc,Rg,Lc,Lg]\n";
+        exit(1);
     }
 
     if(sphere == true) ifsph = 1;
     int ierr;
     surfdisp96_(thk,vp,vs,rho,nlayer,ifsph,iwave,mode+1,igr,kmax,t,cg,&ierr);
 
-    // check nan and 0.0  
-    for(int i = 0; i < kmax; i ++){
-        if(std::isnan(cg[i])){
-            ierr = 1;
-            break;
-        }
-    }
+    // check nan and 0.0
     if(ierr != 0){
         for(int i = 0; i < kmax; i++){
             if(cg[i] == 0.0 || std:: isnan(cg[i])) {

@@ -1,0 +1,67 @@
+# Compiled object files
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.run
+
+# Fortran module files
+*.mod
+*.smod
+
+# Debug files
+*.dSYM/
+*.stackdump
+
+# Build directories
+/build/
+/bin/
+/lib/
+/dist/
+/CMakeFiles/
+/cmake-build-*/
+
+# Makefile auto-generated files
+Makefile
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+
+# Editor files
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+.DS_Store
+.vscode/
+.idea/
+*.user
+
+# Logs
+*.log
+
+# Coverage files
+*.gcda
+*.gcno
+*.gcov
+
+# Python virtual environments (if any)
+venv/
+.env/
