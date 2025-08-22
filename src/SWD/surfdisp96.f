@@ -55,12 +55,12 @@ c     01 JAN 2023 - modified by Nanqiao Du at UofT,
 c       fix save attributes when using ifort and OpenMP 
 c       the compile option is "ifort -extend-source" 
        subroutine surfdisp96(thkm,vpm,vsm,rhom,nlayer,iflsph,iwave,
-     &                       mode,igr,kmax,t,cg)bind(c,name="surfdisp96_")
+     &                       mode,igr,kmax,t,cg,ierr)bind(c,name="surfdisp96_")
         use,intrinsic :: iso_c_binding
         parameter(LER=0,LIN=5,LOT=66)
-        integer NL, NL2, NLAY
+c        integer NL, NL2, NLAY
 c        parameter(NL=200,NLAY=200,NL2=NL+NL)
-        integer NP
+c        integer NP
 c        parameter (Np=100)
 
 c-----
@@ -82,10 +82,13 @@ c     t - period vector (t(NP))
 c     cg - output phase or group velocities (vector,cg(NP))
 c----- 
 c        real*4 thkm(NLAY),vpm(NLAY),vsm(NLAY),rhom(NLAY)
-        integer(c_int),value,INTENT(IN) :: nlayer,iflsph,iwave,mode,igr,kmax
-        real(c_float),INTENT(IN):: thkm(nlayer),vpm(nlayer),vsm(nlayer),rhom(nlayer)
-        real(c_double),INTENT(IN) ::  t(kmax)
-        real(c_double),INTENT(INOUT) :: cg(kmax)
+        integer(c_int),value,intent(in) :: nlayer,iflsph,iwave,mode,igr,kmax
+        real(c_float),intent(in):: thkm(nlayer),vpm(nlayer),vsm(nlayer),rhom(nlayer)
+        real(c_double),intent(in) ::  t(kmax)
+        real(c_double),intent(inout) :: cg(kmax)
+        integer(c_int),intent(out) :: ierr 
+
+c       local vars        
         real(c_double) :: twopi,one,onea
         real(c_double) :: cc,c1,clow,cm,dc,t1
 c       double precision t(NP),c(NP),cb(NP),cg(NP)
@@ -103,7 +106,9 @@ c    maximum number of layers in the model
         mmax = nlayer
 c    is the model flat (nsph = 0) or sphere (nsph = 1)   
         nsph = iflsph
-     
+       
+c    set error code 
+        ierr = 0
 c-----
 c     save current values
         do 39 i=1,mmax
@@ -317,18 +322,19 @@ c -----         print *, itst,iq,t(k),t1a,t1b,cc0,cc1,gvel
  1700     if(iq.gt.1) go to 1750
         if(iverb(ifunc).eq.0)then
             iverb(ifunc) = 1
-          write(LOT,*)'improper initial value in disper - no zero found'
-          write(*,*)'WARNING:improper initial value in disper - no zero found'
-        write(LOT,*)'in fundamental mode '
-        write(LOT,*)'This may be due to low velocity zone '
-        write(LOT,*)'causing reverse phase velocity dispersion, '
-        write(LOT,*)'and mode jumping.'
-        write(LOT,*)'due to looking for Love waves in a halfspace'
-        write(LOT,*)'which is OK if there are Rayleigh data.'
-        write(LOT,*)'If reverse dispersion is the problem,'
-        write(LOT,*)'Get present model using OPTION 28, edit sobs.d,'
-        write(LOT,*)'Rerun with onel large than 2'
-        write(LOT,*)'which is the default '
+            ierr = 1
+c          write(LOT,*)'improper initial value in disper - no zero found'
+c          write(*,*)'WARNING:improper initial value in disper - no zero found'
+c        write(LOT,*)'in fundamental mode '
+c        write(LOT,*)'This may be due to low velocity zone '
+c        write(LOT,*)'causing reverse phase velocity dispersion, '
+c        write(LOT,*)'and mode jumping.'
+c        write(LOT,*)'due to looking for Love waves in a halfspace'
+c        write(LOT,*)'which is OK if there are Rayleigh data.'
+c        write(LOT,*)'If reverse dispersion is the problem,'
+c        write(LOT,*)'Get present model using OPTION 28, edit sobs.d,'
+c        write(LOT,*)'Rerun with onel large than 2'
+c        write(LOT,*)'which is the default '
 c-----
 c   if we have higher mode data and the model does not find that
 c   mode, just indicate (itst=0) that it has not been found, but
@@ -337,15 +343,15 @@ c   eigenfunctions will not be found for these values. The subroutine
 c   'amat' in 'surf' will worry about this in building up the
 c   input file for 'surfinv'
 c-----
-        write(LOT,*)'ifunc = ',ifunc ,' (1=L, 2=R)'
-        write(LOT,*)'mode  = ',iq-1
-        write(LOT,*)'period= ',t(k), ' for k,is,ie=',k,is,ie
-        write(LOT,*)'cc,cm = ',cc,cm
-        write(LOT,*)'c1    = ',c1
-        write(LOT,*)'d,a,b,rho (d(mmax)=control ignore)'
-        write(LOT,'(4f15.5)')(d(i),a(i),b(i),rho(i),i=1,mmax)
-        write(LOT,*)' c(i),i=1,k (NOTE may be part)'
-        write(LOT,*)(c(i),i=1,k)
+c        write(LOT,*)'ifunc = ',ifunc ,' (1=L, 2=R)'
+c        write(LOT,*)'mode  = ',iq-1
+c        write(LOT,*)'period= ',t(k), ' for k,is,ie=',k,is,ie
+c        write(LOT,*)'cc,cm = ',cc,cm
+c        write(LOT,*)'c1    = ',c1
+c        write(LOT,*)'d,a,b,rho (d(mmax)=control ignore)'
+c        write(LOT,'(4f15.5)')(d(i),a(i),b(i),rho(i),i=1,mmax)
+c        write(LOT,*)' c(i),i=1,k (NOTE may be part)'
+c        write(LOT,*)(c(i),i=1,k)
         endif
 c     if(k.gt.0)goto 1750
 c       go to 2000

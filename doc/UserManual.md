@@ -44,7 +44,7 @@ The package is composed of three independent modules:
 
 In the joint inversion process, we apply the direct surface wave tomography method ([Fang et al., 2015](https://academic.oup.com/gji/article/201/3/1251/759155)) to compute the 3-D (pseudo) sensitivity kernel of surface wave travel times. For the gravity forward matrix, we use the adaptive Gauss–Legendre integration method ([Li et al., 2011](https://www.sciencedirect.com/science/article/pii/S0926985111000206)).
 
-Using empirical relationships between seismic velocity and rock density ([Brocher, 2005](https://pubs.geoscienceworld.org/ssa/bssa/article/95/6/2081/146858/Empirical-Relations-between-Elastic-Wavespeeds-and)), this package serves as a valuable tool for investigating the 3-D shear wave structure of the crust and upper mantle. For further technical details, please refer to ([Du et al., 2021])(https://academic.oup.com/gji/article/227/3/1961/6333361).
+Using empirical relationships between seismic velocity and rock density ([Brocher, 2005](https://pubs.geoscienceworld.org/ssa/bssa/article/95/6/2081/146858/Empirical-Relations-between-Elastic-Wavespeeds-and)), this package serves as a valuable tool for investigating the 3-D shear wave structure of the crust and upper mantle. For further technical details, please refer to [Du et al., 2021](https://academic.oup.com/gji/article/227/3/1961/6333361).
 
 This package is written in **C++** and **Fortran**.  
 The C++ components handle core logic tasks, including I/O, data structures, and interfaces.  
@@ -167,7 +167,9 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
 
 - **`NOISE_LEVEL`**  
   Gaussian noise level added to synthetic data. Defined as:  
-  ```math d_{obs}^i = d_{syn}^i + \text{noiselevel} \times \mathcal{N}(0, 1) ```
+  ```math 
+  d_{obs}^i = d_{syn}^i + \text{noiselevel} \times \mathcal{N}(0, 1) 
+  ```
 
 - **`INV_METHOD`**  
   Select the inversion method:
@@ -197,7 +199,7 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
   ```math
   \Sigma = \text{Diag}[\sigma_h^2, \sigma_h^2, \sigma_v^2]
   ```
-  If `SMOOTH_IN_KM = 1`, then \( \sigma_h, \sigma_v \) are in kilometers and \( \mathbf{x} \) represents spatial coordinates; otherwise, they are in grid indices.
+  If `SMOOTH_IN_KM = 1`, then ( $\sigma_h$, $\sigma_v$ ) are in kilometers and $\mathbf{x}$ represents spatial coordinates; otherwise, they are in grid indices.
 
 - **`ITER_START`**  
   Use only the previous models starting from this iteration in L-BFGS/CG mode. This must match the current iteration when testing new smoothing parameters.

@@ -42,9 +42,9 @@ compute_gravity(const fmat3 &vs,const fmat3 &vsref,const csr_matrix &gmat,
 
 int main(int argc, char **argv){
     if(argc != 7) {
-        printf("please run syngrav refmod truemod obsgrav " \
+        printf("please run syngrav (reference model) (target model) obsgrav " \
                 "gravmat remove_mean(0 or 1) outfile\n");
-        printf("example: ./syngrav MOD.ref MOD.true obsgrav.dat gravmat.bin 1 out.txt\n");
+        printf("example: ./syngrav MOD.ref MOD.target obsgrav.dat gravmat.bin 1 out.txt\n");
         exit(1);
     }
 
