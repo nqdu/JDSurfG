@@ -5,7 +5,7 @@ Version 4.3
 From version 5.0, `Vp` and `Vs` can be independently handled.
 
 ## Note
-Please note that the format of the input files after `v4.0` are a little different from previous versions!
+From version 4.3, we migrate from `C++11` to `C++14`. 
 
 ## New Features
 * Add topographic correction
