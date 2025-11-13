@@ -23,15 +23,15 @@ if(NOT DEFINED ${var})
 set(${var} ${val})
 endif()
 endmacro()
-setDefault(EIGEN_INC   "~/software/eigen-3.4.0")
+setDefault(EIGEN_INC   "~/software/eigen-5.0.0")
 setDefault(BUILD_TEST   FALSE)
+setDefault(CMAKE_CXX_STANDARD 14)
 
 # project
 project(JDSurfG LANGUAGES CXX Fortran)
 
 # build type 
 set(CMAKE_BUILD_TYPE RELEASE)
-set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/obj)
 
@@ -46,6 +46,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -xHost -extend-source")
 else () # mac
   set(CMAKE_CXX_FLAGS_RELEASE " ${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+  #SET(CMAKE_CXX_FLAGS_RELEASE "")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -march=native -ffixed-line-length-none")
 endif()
 

@@ -103,7 +103,9 @@
         "queue": "cpp",
         "numbers": "cpp",
         "compare": "cpp",
-        "concepts": "cpp"
+        "concepts": "cpp",
+        "forward_list": "cpp",
+        "print": "cpp"
     },
     "C_Cpp.default.compilerArgs": ["-Drestrict=__restrict"],
     "fortran.linter.modOutput": "${workspaceFolder}/obj"
