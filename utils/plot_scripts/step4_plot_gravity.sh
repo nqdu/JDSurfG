@@ -7,8 +7,8 @@ xmax=`echo $info |awk '{print $2}'`
 ymin=`echo $info |awk '{print $3}'`
 ymax=`echo $info |awk '{print $4}'`
 region="$xmin/$xmax/$ymin/$ymax"
-dx=`echo "$xmin $xmax" |awk '{print ($2-$1) / 127.}'`
-dy=`echo "$ymin $ymax" |awk '{print ($2-$1) / 127.}'`
+dx=`echo "$xmin $xmax" |awk -v n=$NGRD '{print ($2-$1) / (n-1)}'`
+dy=`echo "$ymin $ymax" |awk -v n=$NGRD '{print ($2-$1) / (n-1)}'`
 awk '{print $1,$2,$3}' $RESULT_DIR/res_grav$MODEL.dat |gmt surface -R$region -I$dx/$dy -Gobsg.grd -Vq
 awk '{print $1,$2,$4}' $RESULT_DIR/res_grav$MODEL.dat |gmt surface -R$region -I$dx/$dy -Gsyng.grd -Vq
 
