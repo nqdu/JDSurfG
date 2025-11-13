@@ -15,6 +15,9 @@ public:
     float smooth,damp; // parameters for lsmr
     int nthreads;
 
+    // topography correction
+    int topo_corr;
+
     // nonlinear cg/lbfgs
     int smooth_in_km;
     float sigma_h,sigma_v; // cg smoothing parameters

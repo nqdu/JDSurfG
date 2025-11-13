@@ -11,7 +11,7 @@
  * @param mode mode =0 fundamental, = 1 first order
  * @param wavetype wavetype, one of [Rc,Rg,Lc,Lg]
  */ 
-int SurfTime :: 
+int RayTracingFMM :: 
 get_period_index(int period_idx,int mode,const std::string &wavetype) const
 {
     int idx;
@@ -200,8 +200,11 @@ disp1D(const float *vs,const float *vp,const float *rho,const float *dep,
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tRc.col(mode));
             if(nt > 0) {
-                surfdisp(rthk,rvp,rvs,rrho,rmax,&tRc(0,mode),vc+idx,
-                        nt,"Rc",mode,sphere,keep_flat);
+                surfdisp(
+                    rthk,rvp,rvs,rrho,rmax,
+                    &tRc(0,mode),vc+idx,
+                    nt,"Rc",mode,sphere,keep_flat
+                );
                 memcpy(vout+idx,vc+idx,nt*sizeof(double));
                 idx += nt;
             }
@@ -212,10 +215,16 @@ disp1D(const float *vs,const float *vp,const float *rho,const float *dep,
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tRg.col(mode));
             if(nt > 0) {
-                surfdisp(rthk,rvp,rvs,rrho,rmax,&tRg(0,mode),vc+idx,
-                        nt,"Rc",mode,sphere,keep_flat);
-                groupvel_r(rthk,rvp,rvs,rrho,rmax,&tRg(0,mode),
-                            vout+ idx,nt,mode,sphere);
+                surfdisp(
+                    rthk,rvp,rvs,rrho,rmax,
+                    &tRg(0,mode),vc+idx,
+                    nt,"Rc",mode,sphere,keep_flat
+                );
+                groupvel_r(
+                    rthk,rvp,rvs,rrho,rmax,
+                    &tRg(0,mode),
+                    vout+ idx,nt,mode,sphere
+                );
                 idx += nt;
             }
         }
@@ -225,8 +234,11 @@ disp1D(const float *vs,const float *vp,const float *rho,const float *dep,
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tLc.col(mode));
             if(nt > 0) {
-                surfdisp(rthk,rvp,rvs,rrho,rmax,&tLc(0,mode),vc+idx,
-                        nt,"Lc",mode,sphere,keep_flat);
+                surfdisp(
+                    rthk,rvp,rvs,rrho,rmax,
+                    &tLc(0,mode),vc+idx,
+                    nt,"Lc",mode,sphere,keep_flat
+                );
                 memcpy(vout+idx,vc+idx,nt*sizeof(double));
                 idx += nt;
             }
@@ -238,10 +250,15 @@ disp1D(const float *vs,const float *vp,const float *rho,const float *dep,
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tLg.col(mode));
             if(nt > 0) {
-                surfdisp(rthk,rvp,rvs,rrho,rmax,&tLg(0,mode),vc+idx,
-                        nt,"Lc",mode,sphere,keep_flat);
-                groupvel_l(rthk,rvs,rrho,rmax,&tLg(0,mode),
-                            vout + idx,nt,mode,sphere);
+                surfdisp(
+                    rthk,rvp,rvs,rrho,rmax,
+                    &tLg(0,mode),vc+idx,
+                    nt,"Lc",mode,sphere,keep_flat
+                );
+                groupvel_l(
+                    rthk,rvs,rrho,rmax,&tLg(0,mode),
+                    vout + idx,nt,mode,sphere
+                );
                 idx += nt;
             }
         }
@@ -320,19 +337,19 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
         int nmode = tRg.cols();
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tRg.col(mode));
-            double cp[nt],t1[nt],t2[nt],c1[nt],c2[nt];
+            std::vector<double> cp(nt),t1(nt),t2(nt),c1(nt),c2(nt);
             double dt = 0.01;
             for(int i=0;i<nt;i++){
                 t1[i] = tRg(i,mode) * (1.0 + 0.5 * dt);
                 t2[i] = tRg(i,mode) * (1.0 - 0.5 * dt);
             }
-            surfdisp(rthk,rvp,rvs,rrho,rmax,&tRg(0,mode),cp,nt,"Rc",mode,sphere);
-            surfdisp(rthk,rvp,rvs,rrho,rmax,t1,c1,nt,"Rc",mode,sphere);
-            surfdisp(rthk,rvp,rvs,rrho,rmax,t2,c2,nt,"Rc",mode,sphere);
+            surfdisp(rthk,rvp,rvs,rrho,rmax,&tRg(0,mode),cp.data(),nt,"Rc",mode,sphere);
+            surfdisp(rthk,rvp,rvs,rrho,rmax,t1.data(),c1.data(),nt,"Rc",mode,sphere);
+            surfdisp(rthk,rvp,rvs,rrho,rmax,t2.data(),c2.data(),nt,"Rc",mode,sphere);
             for(int i=0;i<nt;i++){
                 int k = i + idx;
-                sregnpu_(rthk,rvp,rvs,rrho,rmax,&tRg(i,mode),cp+i,vc+k,
-                        ur,uz,tr,tz,t1+i,c1+i,t2+i,c2+i,dcdar,
+                sregnpu_(rthk,rvp,rvs,rrho,rmax,&tRg(i,mode),cp.data()+i,vc+k,
+                        ur,uz,tr,tz,&t1[i],&c1[i],&t2[i],&c2[i],dcdar,
                         dcdbr,dcdhr,dcdrr,dudar,dudbr,dudhr,dudrr,iflsph);
                 _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                             rthk,rvp,rvs,rrho,rmax,dudar,kvp+k*nz);
@@ -376,19 +393,28 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
         for(int mode = 0; mode < nmode; mode ++) {
             int nt = get_nt_row(tLg.col(mode));
             if(nt == 0) continue;
-            double cp[nt],t1[nt],t2[nt],c1[nt],c2[nt];
+            std::vector<double> cp(nt),t1(nt),t2(nt),c1(nt),c2(nt);
             double dt = 0.01;
             for(int i=0;i<nt;i++){
                 t1[i] = tLg(i,mode) * (1.0 + 0.5 * dt);
                 t2[i] = tLg(i,mode) * (1.0 - 0.5 * dt);
             }
-            surfdisp(rthk,rvp,rvs,rrho,rmax,&tLg(0,mode),cp,nt,"Lc",mode,sphere);
-            surfdisp(rthk,rvp,rvs,rrho,rmax,t1,c1,nt,"Lc",mode,sphere);
-            surfdisp(rthk,rvp,rvs,rrho,rmax,t2,c2,nt,"Lc",mode,sphere);
+            surfdisp(
+                rthk,rvp,rvs,rrho,rmax,&tLg(0,mode),
+                cp.data(),nt,"Lc",mode,sphere
+            );
+            surfdisp(
+                rthk,rvp,rvs,rrho,rmax,
+                t1.data(),c1.data(),nt,"Lc",mode,sphere
+            );
+            surfdisp(
+                rthk,rvp,rvs,rrho,rmax,
+                t2.data(),c2.data(),nt,"Lc",mode,sphere
+            );
             for(int i=0;i<nt;i++){
                 int k = i + idx;
-                slegnpu_(rthk,rvs,rrho,rmax,&tLg(i,mode),cp+i,vc+k,uz,tz,
-                        t1 + i,c1 + i, t2 + i,c2 + i,dcdbr,dcdhr,dcdrr,
+                slegnpu_(rthk,rvs,rrho,rmax,&tLg(i,mode),&cp[i],vc+k,uz,tz,
+                        &t1[i],&c1[i], &t2[i],&c2[i],dcdbr,dcdhr,dcdrr,
                         dudbr,dudhr,dudrr,iflsph);
                 _ParamConvert(dep,vp,vs,rho,nz,sublayer,
                             rthk,rvp,rvs,rrho,rmax,dudbr,kvs+k*nz);
@@ -417,7 +443,7 @@ kernel1D(const float *vs,const float *vp,const float *rho,const float *dep,int n
  * @param vc phase dispersion map(nx*ny,nt)
  * @param vout used dispersion map(nx*ny,nt),
 */
-void SurfTime ::
+void RayTracingFMM::
 get_2d_map(const fmat3 &vs,dmat2 &vc,dmat2 &vout) const
 {
     // get dimension
@@ -434,16 +460,19 @@ get_2d_map(const fmat3 &vs,dmat2 &vc,dmat2 &vout) const
         int j = n/nx;
 
         // convert vs to vp, rho by empirical relations
-        float v[nz],rho[nz],vp[nz],dep[nz];
+        std::vector<float> v(nz),rho(nz),vp(nz),dep(nz);
         for(int k=0;k<nz;k++){
             v[k] = vs(i,j,k);
-            dep[k] = this->depth[k];
+            dep[k] = this->depth(i,j,k);
             empirical_relation(v[k],vp[k],rho[k]);
         }
 
         // compute frechet kernel
         dvec c(nt),cout(nt);
-        disp1D(v,vp,rho,dep,nz,tRc,tRg,tLc,tLg,c.data(),cout.data());
+        disp1D(
+            v.data(),vp.data(),rho.data(),dep.data(),
+            nz,tRc,tRg,tLc,tLg,c.data(),cout.data()
+        );
         vc.row(n) = c.transpose();
         vout.row(n) = cout.transpose();
     }
@@ -455,7 +484,7 @@ get_2d_map(const fmat3 &vs,dmat2 &vc,dmat2 &vout) const
  *  @param vmap dispersion map, shape(nx*ny,nt)
  *  @param kernel frechet kernel, shape(nx*ny,nz,nt) 
  */
-void SurfTime:: 
+void RayTracingFMM:: 
 get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const
 {
     // get dimension
@@ -472,10 +501,10 @@ get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const
         int j = n/nx;
 
         // convert vs to vp, rho by empirical relations
-        float v[nz],rho[nz],vp[nz],dep[nz];
+        std::vector<float> v(nz),rho(nz),vp(nz),dep(nz);
         for(int k=0;k<nz;k++){
             v[k] = vs(i,j,k);
-            dep[k] = this -> depth[k];
+            dep[k] = this -> depth(i,j,k);
             empirical_relation(v[k],vp[k],rho[k]);
         }
 
@@ -483,8 +512,11 @@ get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const
         dmat2 kvs(nz,nt),kvp(nz,nt),krho(nz,nt);
         dvec cp(nt),cg(nt);
         kvs.setZero(); kvp.setZero();krho.setZero();
-        kernel1D(v,vp,rho,dep,nz,tRc,tRg,tLc,tLg,cp.data(),cg.data(),kvs.data(),
-                kvp.data(),krho.data());
+        kernel1D(
+            v.data(),vp.data(),rho.data(),dep.data(),
+            nz,tRc,tRg,tLc,tLg,cp.data(),cg.data(),kvs.data(),
+            kvp.data(),krho.data()
+        );
         vc.row(n) = cp.transpose();
         vout.row(n) = cg.transpose();
 
@@ -506,7 +538,7 @@ get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const
  * @param vs vs model, shape(nx,ny,nz)
  * @param data shape(nt)
 */
-void SurfTime:: 
+void RayTracingFMM:: 
 travel_time(const fmat3 &vs,fvec &data) const
 {
     // get vs-dimension
@@ -551,7 +583,7 @@ travel_time(const fmat3 &vs,fvec &data) const
  * @param outfile string, output matrix file
  * @return nonzeros  nonzeros in frechet matrix
 */
-int SurfTime::
+int RayTracingFMM::
 frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
 {
     // get dimension
@@ -611,11 +643,11 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
             const StationPair &p = Pairs[ievt];
             int nr = p.nr;
             int idx = get_period_index(p.period_idx,p.mode,p.wavetype);
-            float ttime[nr];
+            std::vector<float> ttime(nr);
 
             // compute 3-D pseudo sensitivity kernel
             fmst_init(nx,ny,lat0,lon0,dlat,dlon);
-            fmst_run(&vc(0,idx),p.srcx,p.srcz,&p.rcx[0],&p.rcz[0],nr,ttime);
+            fmst_run(&vc(0,idx),p.srcx,p.srcz,&p.rcx[0],&p.rcz[0],nr,ttime.data());
             fmst_reset(&vout(0,idx));
 
             // loop around all receivers
@@ -644,8 +676,8 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
                 nonzeros[myrank] += nar;
 
                 // save kernel
-                int myindx[nar]; 
-                float value[nar];
+                std::vector<int> myindx(nar);
+                std::vector<float> value(nar);
                 int counter = 0;
                 for(int j=0;j<n;j++){
                     float tmp = frechet[j];
@@ -655,8 +687,8 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
                         counter += 1;
                     }
                 }
-                fp.write((char*)myindx,sizeof(int) * nar);
-                fp.write((char*)value,sizeof(float) * nar);
+                fp.write((char*)myindx.data(),sizeof(int) * nar);
+                fp.write((char*)value.data(),sizeof(float) * nar);
                 data[p.counter + i] = ttime[i];
             }
 
@@ -675,8 +707,17 @@ frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const
     return nonzeros.sum();
 }
 
-void SurfTime :: 
-set_model(const fvec &dep,float goxd,float gozd,float dvxd,float dvzd)
+/**
+ * @brief Set 1D model parameters
+ * 
+ * @param dep 
+ * @param goxd 
+ * @param gozd 
+ * @param dvxd 
+ * @param dvzd 
+ */
+void RayTracingFMM :: 
+set_model(const fmat3 &dep,float goxd,float gozd,float dvxd,float dvzd)
 {
     this -> depth = dep;
     lat0 = goxd;
@@ -692,7 +733,7 @@ set_model(const fvec &dep,float goxd,float gozd,float dvxd,float dvzd)
  * @param data synthetic data
  * @param grad gradient, shape((nx-2)*(ny-2)*(nz-1))
  */
-void SurfTime:: 
+void RayTracingFMM:: 
 compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
 {
     // get dimension
@@ -734,11 +775,11 @@ compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
             const StationPair &p = Pairs[ievt];
             int nr = p.nr;
             int idx = get_period_index(p.period_idx,p.mode,p.wavetype);
-            float ttime[nr];
+            std::vector<float> ttime(nr);
 
             // compute 3-D pseudo sensitivity kernel
             fmst_init(nx,ny,lat0,lon0,dlat,dlon);
-            fmst_run(&vc(0,idx),p.srcx,p.srcz,&p.rcx[0],&p.rcz[0],nr,ttime);
+            fmst_run(&vc(0,idx),p.srcx,p.srcz,&p.rcx[0],&p.rcz[0],nr,ttime.data());
             fmst_reset(&vout(0,idx));
             
             // loop all receivers to add grads
@@ -780,8 +821,12 @@ compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const
     }}}
 }
 
-
-void SurfTime:: 
+/**
+ * write synthetic data to file
+ * @param dsyn synthetic data vector
+ * @param outfile output file name
+*/
+void RayTracingFMM:: 
 write_syn(const fvec &dsyn, const std::string &outfile) const{
 
     // open file

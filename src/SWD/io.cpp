@@ -26,7 +26,7 @@ read_receiver(std::ifstream &infile,std::string &line,std::vector<float> &rcx,
     return nr;   
 }
 
-void SurfTime::  
+void RayTracingFMM::  
 read_swd_data(const std::string &datafile)
 {
     const float DEG2RAD = M_PI / 180.;

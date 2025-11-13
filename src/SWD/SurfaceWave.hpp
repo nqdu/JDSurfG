@@ -52,14 +52,12 @@ float fmst_raypath(float scx,float scz,float rcx,float rcz,float *fdm);
 
 struct StationPair
 {
-public:
     std::string wavetype;
     int counter; // data counter
     int period_idx; // which period, 0 for minimum period used and >0 for else
     int mode; // which mode, 0 for fundamental and >=1 for higher modes
     int nr; // no. of receivers
 
-public:
     float srcx,srcz; // source station colat and lon, in rad
     std::vector<float> rcx,rcz;// receiver station coordinates, colat and lon ,in rad
     std::vector<float> dist,obstime; // distance and traveltime
@@ -81,7 +79,7 @@ public:
 
 };
 
-class SurfTime
+class RayTracingFMM
 {
 public:
     ivec kmaxRc,kmaxRg,kmaxLc,kmaxLg;
@@ -91,28 +89,25 @@ public:
     std::vector<StationPair> Pairs;
 
 private:
-    // depth vector for compute dispersion
-    fvec depth;
+    // local 1-D model depth
+    fmat3 depth;
 
     // model parameters
     float lon0,lat0; // upper left lon/lat in deg
     float dlon,dlat; // model spacing, in deg
-
-private:
-    void get_2d_map(const fmat3 &vs,dmat2 &vc,dmat2 &vout) const;
-    void get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const;
-    int get_period_index(int idx,int mode,const std::string &wavetp) const ;
-    // void SurfWaveKernel(MOD3d &mod,const fmat3 &vs,Eigen::MatrixXd &pv,
-    //                        Eigen::Tensor<double,3> &kernel );
-    // int get_period_index(int idx,std::string &wavetype);
 
 public:
     void travel_time(const fmat3 &vs,fvec &data) const;
     int frechet_matrix(const fmat3 &vs,fvec &data,const std::string &outfile) const;
     void compute_grad(const fmat3 &vs,fvec &data,fvec &grad) const;
     void write_syn(const fvec &dsyn, const std::string &outfile) const;
-    void set_model(const fvec &dep,float goxd,float gozd,float dvxd,float dvzd);
+    void set_model(const fmat3 &dep,float goxd,float gozd,float dvxd,float dvzd);
     void read_swd_data(const std::string &datafile);
+
+private:
+    void get_2d_map(const fmat3 &vs,dmat2 &vc,dmat2 &vout) const;
+    void get_1d_kernel(const fmat3 &vs,dmat2 &vc,dmat2 &vout,dmat3 &kernel ) const;
+    int get_period_index(int idx,int mode,const std::string &wavetp) const ;
 };
 
 #endif // end JDSURFG_SWD_SURFACEWAVE_H_

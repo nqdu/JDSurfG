@@ -8,6 +8,17 @@
 void create_directory(const char *dirname);
 void print_progressbar(float percentage);
 
+void read_velocity_model(const std::string &modfile,
+                         fmat3 &vs,
+                         fvec &depth,
+                         fvec &lon,
+                         fvec &lat,
+                         bool print_info = true);
+
+void interpolate_topo(const std::string &topofile,
+                     const fvec &lat,
+                     const fvec &lon,
+                     fmat3 &depth);
 
 /**
  * @brief template function to read parameters by using regex
@@ -49,10 +60,6 @@ read_par_regex(const std::string &varname,T &var,std::ifstream &infile)
             break;
         }
         regfree(&reg);
-    }
-
-    if(ierr == 1){
-      printf("cannot find %s\n",varname.c_str());
     }
     
     return ierr;

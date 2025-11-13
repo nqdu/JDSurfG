@@ -21,7 +21,7 @@ public:
 class JSurfGTomo{
 public:
     //swd data
-    SurfTime surf;
+    RayTracingFMM swsol;
 
     // gravity data
     csr_matrix gmat;
@@ -32,7 +32,8 @@ public:
 
     // models
     fmat3 vstrue,vsinit,vsref;
-    fvec lon,lat,dep;
+    fvec lon,lat;
+    fmat3 dep;
 
 private:
     void compute_grav_grad(const fmat3 &vs,fvec &dgsyn,fvec &grad) const;

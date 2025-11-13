@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     const auto &param = tomo.param;
 
     // data dimen
-    int m1 = tomo.surf.obst.size(), m2 = tomo.obsg.size();
+    int m1 = tomo.swsol.obst.size(), m2 = tomo.obsg.size();
     fvec res1(m1),res2(m2);
     
    // initialize some parameters
@@ -67,9 +67,21 @@ int main(int argc, char* argv[]){
     for(int k=0;k<nz;k++){
     for(int j=0;j<ny;j++){
     for(int i=0;i<nx;i++){
-        fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+        fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),vsf(i,j,k));
     }}}
     fclose(fp);
+
+    // save true model if required
+    if(tomo.param.ifsyn == 1){
+        resfile= outdir + "/mod_true.dat";
+        fp = fopen(resfile.c_str(),"w");
+        for(int k=0;k<nz;k++){
+        for(int j=0;j<ny;j++){
+        for(int i=0;i<nx;i++){
+            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),tomo.vstrue(i,j,k)); 
+        }}}
+        fclose(fp);
+    }
 
     // allocate space for input x 
     fvec x;
@@ -112,7 +124,7 @@ int main(int argc, char* argv[]){
         }
 
         // compute mean and rms of residuals
-        res1 = tomo.surf.obst - dsyn.segment(0,m1);
+        res1 = tomo.swsol.obst - dsyn.segment(0,m1);
         res2 = tomo.obsg - dsyn.segment(m1,m2);
         float mean1 = res1.sum() / m1, mean2 = res2.sum() / m2;
         float rms1 = std::sqrt(res1.square().sum() / m1);
@@ -132,7 +144,7 @@ int main(int argc, char* argv[]){
         for(int k=0;k<nz;k++){
         for(int j=0;j<ny;j++){
         for(int i=0;i<nx;i++){
-            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),vsf(i,j,k));
         }}}
         fclose(fp);
     }
@@ -141,11 +153,11 @@ int main(int argc, char* argv[]){
     printf("\n");
     printf("synthetic traveltime for the result model \n");
     fvec dsyn1(m1),dsyn2(m2);
-    tomo.surf.travel_time(vsf,dsyn1);
+    tomo.swsol.travel_time(vsf,dsyn1);
     tomo.compute_gravity(vsf,dsyn2);
 
     // compute mean and rms of residuals
-    res1 = tomo.surf.obst - dsyn1;
+    res1 = tomo.swsol.obst - dsyn1;
     res2 = tomo.obsg - dsyn2;
     float mean1 = res1.sum() / m1, mean2 = res2.sum() / m2;
     float rms1 = std::sqrt(res1.square().sum() / m1);

@@ -13,12 +13,13 @@ public:
 };
 
 
-class DSurfTomo{
+class DSurfTomo {
 public:
-    SurfTime surf;
+    RayTracingFMM swsol;
     DSurfTomoParams param;
     fmat3 vstrue,vsinit;
-    fvec lon,lat,dep;
+    fmat3 dep; // 3D depth model if topo correction is applied
+    fvec lon,lat;
     
 public:
     void read_model(const std::string &modfile,const std::string &modtrue) ;

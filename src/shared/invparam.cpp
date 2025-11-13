@@ -2,35 +2,49 @@
 #include "IOFunc.hpp"
 #include <sstream>
 
+/**
+ * @brief read inversion parameters from file
+ * 
+ * @param paramfile parameter file name
+ */
 void InverseParamsBase :: 
 read_file(const std::string &paramfile) {
     // open file
     std::ifstream infile; infile.open(paramfile);
 
+    // macros to read inversion parameters
+    #define READ_PARAM(NAME,VAR) \
+        ierr = read_par_regex(NAME,VAR,infile); \
+        if(ierr == 1){ \
+            printf("cannot find %s\n",NAME); \
+            exit(1); \
+        }
+
     // inv method
-    read_par_regex("INV_METHOD",inv_method,infile);
+    int ierr;
+    READ_PARAM("INV_METHOD",inv_method);
 
     // read parameters from file
-    read_par_regex("NITERS",maxiter,infile);
-    int ierr = read_par_regex("ITER_CURRENT",iter_cur,infile);
+    READ_PARAM("NITERS",maxiter);
+    ierr = read_par_regex("ITER_CURRENT",iter_cur,infile);
     if(ierr == 1) {
         iter_cur = 0;
     }
 
     // constraints
-    read_par_regex("MIN_VELOC",minvel,infile);
-    read_par_regex("MAX_VELOC",maxvel,infile);
+    READ_PARAM("MIN_VELOC",minvel);
+    READ_PARAM("MAX_VELOC",maxvel);
 
     // read inv params based on inv_method
     if(inv_method == 0) { //LSMR
-        read_par_regex("SMOOTH",smooth,infile);
-        read_par_regex("DAMP",damp,infile);
-        read_par_regex("NTHREADS",nthreads,infile);
+        READ_PARAM("SMOOTH",smooth);
+        READ_PARAM("DAMP",damp);
+        READ_PARAM("NTHREADS",nthreads);
     } 
     else {
-        read_par_regex("SMOOTH_IN_KM",smooth_in_km,infile);
-        read_par_regex("SIGMA_H",sigma_h,infile);
-        read_par_regex("SIGMA_V",sigma_v,infile);
+        READ_PARAM("SMOOTH_IN_KM",smooth_in_km);
+        READ_PARAM("SIGMA_H",sigma_h);
+        READ_PARAM("SIGMA_V",sigma_v);
         ierr = read_par_regex("ITER_START",iter_start,infile);
         if(ierr == 1) {
             iter_start = 0;
@@ -38,7 +52,13 @@ read_file(const std::string &paramfile) {
     }
 
     // synthetic test 
-    read_par_regex("SYN_TEST",ifsyn,infile);
+    READ_PARAM("SYN_TEST",ifsyn);
+
+    // read topography if required
+    ierr = read_par_regex("TOPO_CORR",topo_corr,infile);
+    if(ierr == 1) {
+        topo_corr = 0;
+    }
 
     // print on the screen 
     printf("Inversion Parameters:\n");
@@ -62,10 +82,12 @@ read_file(const std::string &paramfile) {
         printf("sigma_h = %f,  sigma_v = %f\n",sigma_h,sigma_v);
 
         // read line search params
-        read_par_regex("MAX_REL_STEP",MAX_REL_STEP,infile);
+        READ_PARAM("MAX_REL_STEP",MAX_REL_STEP);
     }
 
     // close file
     infile.close();
+
+    #undef READ_PARAM
     
 }

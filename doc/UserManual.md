@@ -10,8 +10,9 @@ Manual of JDSurfG
   - [4.1 Parameter file](#dsurf-param)
   - [4.2 Initial Model and True Model Files](#dsurf-model-file)
   - [4.3 Dispersion Data File](#dsurf-data-file)
-  - [4.4 Run This Module](#dsurf-run)
-  - [4.5 Output Files](#dsurf-output)
+  - [4.4 Topography file](#dsurf-topo-file)
+  - [4.5 Run This Module](#dsurf-run)
+  - [4.6 Output Files](#dsurf-output)
 - [5. Joint Inversion Module](#joint)
   - [5.1 Parameter File](#joint-param)
   - [5.2 Gravity Data File](#joint-data-file)
@@ -60,9 +61,9 @@ The Fortran modules—adapted from the [DSurfTomo](https://github.com/HongjianFa
 ## 2. Preliminaries
 This package uses the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) C++ library to handle multi-dimensional arrays. You need to install Eigen on your system before compiling this package.
 
-Make sure your **C++ compiler supports C++11** standards (e.g., **GCC ≥ 4.8**).
+Make sure your **C++ compiler supports C++14** standards (e.g., **GCC ≥ 5.0**). If you are using **GCC ≤ 4.8**, please ensure that you have **Eigen ≤ 3.4.0** installed.
 
-The package is built using the [CMake](https://cmake.org/) build system. Ensure that your `cmake` version is **≥ 3.1.0**.
+The package is built using the [CMake](https://cmake.org/) build system. Ensure that your `cmake` version is **≥ 3.10.0**.
 
 [Back to Table of Contents](#toc)
 
@@ -79,6 +80,7 @@ cd build
 cmake .. -DCXX=g++ -DFC=gfortran -DEIGEN_INC=/path/to/eigen
 make -j4
 ```
+
 This will generate four executable files in the bin/ directory:
 ```bash 
 mkmat DSurfTomo JointSG syngrav
@@ -89,6 +91,9 @@ cmake .. -DCXX=g++ -DFC=gfortran -DEIGEN_INC=/path/to/eigen \
          -DBUILD_TEST=TRUE
 make -j4
 ```
+
+
+
 [Back to Table of Contents](#toc)
 
  <a id="dsurf"></a>
@@ -101,6 +106,8 @@ This module requires 3 input files (or 4 if you're running a checkerboard or oth
 - `surfdataSC.dat`: Dispersion data for each station pair.
 - `MOD`: Initial model.
 - `MOD.true`: True model (required only for synthetic tests).
+- `topography.dat`: [topography file](#44-topography-file) (optional)
+
 
 Before proceeding to the file formats, please consider the following:
 
@@ -134,6 +141,9 @@ MAX_VELOC = 5.0
 SYN_TEST = 1           # 0: real data, 1: synthetic
 NOISE_LEVEL = 1.5      # Std. dev. of Gaussian noise
 
+# topography CORRECTION
+TOPO_CORR  =  0        # 1: enable topographic correction
+
 # Inversion method: 0 = LSMR, 1 = CG, 2 = LBFGS
 INV_METHOD = 2
 
@@ -147,8 +157,6 @@ SMOOTH_IN_KM = 0       # If 1, smoothing in km; else in grid units
 SIGMA_H = 0.25         # Horizontal smoothing parameter
 SIGMA_V = 0.25         # Vertical smoothing parameter
 ITER_START = 0         # Start iteration for using previous model info
-
-# Line search settings
 MAX_REL_STEP = 0.04    # Max relative change allowed per iteration
 ```
 Lines beginning with # are treated as comments and ignored. You may freely add your own comments. Here is the parameters description below:
@@ -161,6 +169,9 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
 
 - **`MIN_VELOC`, `MAX_VELOC`**  
   Minimum and maximum permitted shear wave velocities (in km/s). These serve as prior constraints on the velocity model.
+
+- **`TOPO_CORR`**  
+  This option enables topographic correction.  If this option is not present in the file, the default value is 0. When enabled (`1`), topographic effects will be considered in the calculation of dispersion by thickening or thinning the first layer. The topographic file will be read from `topographic.dat`, the format can be found [here](#44-topography-file). For details, refer to [Woodhouse, 1974](https://doi.org/10.1111/j.1365-246X.1974.tb04098.x) and [Snieder, 1986](https://doi.org/10.1016/0031-9201(86)90072-5).
 
 - **`SYN_TEST`**  
   Whether to perform a synthetic test. If enabled (`1`), the `MOD.true` file should be provided.
@@ -306,9 +317,27 @@ Receiver stations follow the master station entry. Each line contains:
 ```ini
 latitude longitude dispersion_value
 ```
-<a id="dsurf-run"></a>
 
-### 4.4 Run This Module
+<a id="dsurf-topo-file"></a>
+### 4.4 Topography file
+The template is as following:
+```bash
+50 52 # no. of points in lat/lon direction
+36.5 95.5  # origin point lat/lon (northwest)
+0.2 0.2  # dlat,dlon 
+0.   # values in following 50x52 lines
+0.
+```
+- **Number of Points**: The first line specifies the number of grid points in the latitude and longitude directions. In this example, there are 50 points in both the latitude and longitude dimensions.
+
+- **Origin Point**: The second line indicates the coordinates of the origin point, defined by its latitude and longitude. In this case, the origin is located at 36.5°N and 95.5°E, which corresponds to the northwest corner of the topographic grid.
+
+- **Spacing**: The third line provides the values of `dlat` and `dlon`, which represent the spatial resolution in degrees for latitude and longitude, respectively. Here, both values are set to 0.2, indicating a grid spacing of 0.2 degrees.
+
+- **Values**: The following lines represent topography (in km), which should be printed in row-major format like the velocity model.
+
+<a id="dsurf-run"></a>
+### 4.5 Run This Module
 After you have prepared all the required files in a folder,
 then you could enter into this folder,and run this command
 in your shell:
@@ -320,7 +349,7 @@ order on the screen.
 
 <a id="dsurf-output"></a>
 
-### 4.5 Output Files
+### 4.6 Output Files
 This module outputs one folder: `results/`. It contains all intermediate models (`mod_iter*`) and data files (`res*.dat`) for each iteration. There may also be temporary binary files (`*.bin`) that store the optimization history of NLCG/L-BFGS optimization.
 
 The format of the model file is:
@@ -347,9 +376,12 @@ This module requires 4–6 input files:
 - `gravmat.dat`: Sensitivity kernel of gravity to density.
 - `MOD`: Initial model.
 - `MOD.true`: Checkerboard model.
-- `MOD.ref`: Gravity reference model, used to compute gravity anomaly.
+- `MOD.ref`: Gravity reference model, used to compute 
+gravity anomaly.
+- `topography.dat`: topography file (optional).
+> **Note:**  
+> For Bouguer gravity, the effects of topography are removed! Therefore, the `topography.dat` file will contribute nothing to the gravity matrix.
 
-The formats of each file are described below.
 
 <a id="joint-param"></a>
 
@@ -372,7 +404,7 @@ The weighted cost function for the joint inversion problem, as described in [Jul
         \frac{1-p}{N_2 \sigma_2^2} \sum_{i=1}^{N_2}
         (d_{2,i}- d_{2,i}^o)^2
 ```
-where $\mathbf{d}_{1,2}$ is the data vector for each dataset. $N_{1,2}$
+where $d_{1,2}$ is the data vector for each dataset. $ N_{1,2} $
 is the size of each dataset and $\sigma_{1,2}$ (The `WEIGTH_SWD` and `WEIGHT_GRAV` in `JointSG.in`) is the corresponding
 uncertainties. `p` (`RELATIVE_P`) is a parameter in the range [0,1] to control the contribution
 of each dataset manually.

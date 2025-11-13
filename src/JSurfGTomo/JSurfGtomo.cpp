@@ -59,82 +59,17 @@ read_model(const std::string &modfile,const std::string &modtrue,
 {
     int nx,ny,nz;
     float goxd,gozd,dvxd,dvzd;
-    std::ifstream infile; infile.open(modfile);
-    if(!infile.is_open()) {
-        printf("cannot open %s\n",modfile.c_str());
-        exit(1);
-    }
-    std::string line;
-    getline(infile,line);
-    sscanf(line.c_str(),"%d%d%d",&nx,&ny,&nz);
-    getline(infile,line);
-    sscanf(line.c_str(),"%f%f",&goxd,&gozd);
-    getline(infile,line);
-    sscanf(line.c_str(),"%f%f",&dvxd,&dvzd);
-
-    // output some infomation to screen
-    printf("\nModel Description:\n");
-    printf("===================================\n");
-    printf("model origin: latitude,longitude\n");
-    printf("   %g   %g\n",goxd,gozd);
-    printf("model grid spacing: dlat,dlon\n");
-    printf("   %g   %g\n",dvxd,dvzd);
-    printf("model dimension: nlat,nlon,nz\n");
-    printf("%5d %5d %5d\n",nx,ny,nz); 
-
-    // allocate space
-    vsinit.resize(nx,ny,nz);
-    fvec depth(nz);
-    
-    // read depth
-    printf("Grid points in depth direction:(km):\n");
-    getline(infile,line);
-    size_t len = line.size();
-    char tmp[len + 10];
-    strcpy(tmp,line.c_str());
-    char *starp = tmp,*endp = NULL;
-    for(int i = 0; i < nz; i ++) {
-        depth[i] = std::strtof(starp,&endp);
-        starp = endp;
-        printf("%7.2f ",depth[i]);
-    }
-    printf("\n\n");
-
-    // read model
-    for(int k=0;k<nz;k++){
-    for(int j=0;j<ny;j++){
-    for(int i=0;i<nx;i++){
-        infile >> vsinit(i,j,k);
-    }}}
-    infile.close();
-
-    // set surftime
-    surf.set_model(depth,goxd,gozd,dvxd,dvzd);
-    lon.resize(ny); lat.resize(nx); dep = depth;
-    for(int i = 0; i < nx; i ++){
-        lat[i] = goxd - i * dvxd;
-    }
-    for(int i = 0; i < ny; i ++){
-        lon[i] = gozd + i * dvzd;
-    }
+    fvec depth;
+    read_velocity_model(modfile,vsinit,depth,lon,lat,true);
+    nx = vsinit.dimension(0);
+    ny = vsinit.dimension(1);
+    nz = vsinit.dimension(2);
 
     // read true model if required
     if(param.ifsyn) {
         if(modtrue != "None") {
-            vstrue.resize(nx,ny,nz);
-            infile.open(modtrue);
-            if(!infile.is_open()) {
-                printf("cannot open %s\n",modtrue.c_str());
-                exit(1);
-            }
-            getline(infile,line); getline(infile,line); getline(infile,line);
-            getline(infile,line);
-            for(int k=0;k<nz;k++){
-            for(int j=0;j<ny;j++){
-            for(int i=0;i<nx;i++){
-                infile >> vstrue(i,j,k);
-            }}}
-            infile.close();
+            fvec lon1,lat1,depth1;
+            read_velocity_model(modtrue,vstrue,depth1,lon1,lat1,false);
         }
         else {
             printf("You should input a trumodel file (e.g. MOD.true)! when enabling SYN_TEST \n");
@@ -143,6 +78,8 @@ read_model(const std::string &modfile,const std::string &modtrue,
     }
 
     // read ref model if required
+    std::ifstream infile;
+    std::string line;
     vsref.resize(nx,ny,nz);
     if(modref != "None") {
         infile.open(modref);
@@ -173,13 +110,34 @@ read_model(const std::string &modfile,const std::string &modtrue,
             }}
         }
     }
+
+    // set depth 
+    dep.resize(nx,ny,nz);        
+    for(int k=0;k<nz;k++){
+    for(int j=0;j<ny;j++){
+    for(int i=0;i<nx;i++){
+        dep(i,j,k) = depth[k];
+    }}}
+
+
+    // read topography if required
+    if(param.topo_corr == 1) {
+        printf("topography correction is applied.\n");
+        printf("reading topography from topography.dat\n");
+
+        std::string topofile = "topography.dat";
+        interpolate_topo(topofile,lat,lon,dep);
+    }
+
+    // set surftime
+    swsol.set_model(dep,goxd,gozd,dvxd,dvzd);
 }
 
 void JSurfGTomo:: 
 read_data(const std::string &swdfile,const std::string &gravfile)
 {
     // read swd data
-    surf.read_swd_data(swdfile);
+    swsol.read_swd_data(swdfile);
 
     // read gravity data
     OBSSphGraRandom obssph;
@@ -240,16 +198,16 @@ compute_gravity(const fmat3 &vs,fvec &dgsyn) const
 void JSurfGTomo::  
 checkerboard()
 {
-    int m = surf.obst.size();
+    int m = swsol.obst.size();
     fvec dsyn(m);
-    surf.travel_time(vstrue,dsyn);
+    swsol.travel_time(vstrue,dsyn);
 
     // add noise
     for(int i=0;i<m;i++){
         //dsyn(i) *= (1.0 + param.noiselevel * gaussian());
         dsyn(i) += (float) (param.noilevel1 * gaussian());
     }
-    this -> surf.obst = dsyn*1.0f;
+    this -> swsol.obst = dsyn*1.0f;
 
     // gravity
     fvec dgsyn = obsg * 0.;
@@ -266,12 +224,12 @@ float JSurfGTomo::
 compute_misfit(const fvec &dsyn) const
 {
     // compute weight factor
-    int m1 = surf.obst.size(), m2 = this->obsg.size();
+    int m1 = swsol.obst.size(), m2 = this->obsg.size();
     float s1,s2; 
     param.get_relative_weights(m1,m2,s1,s2);
 
     // misfit
-    float chi1 = (dsyn.segment(0,m1) - surf.obst).square().sum() * 0.5;
+    float chi1 = (dsyn.segment(0,m1) - swsol.obst).square().sum() * 0.5;
     float chi2 = (dsyn.segment(m1,m2) - obsg).square().sum() * 0.5;
 
     return chi1 * s1 + chi2 * s2;
@@ -294,12 +252,12 @@ forward(const fvec &x,fvec &dsyn) const
     }}}
 
     // allocate space
-    int m1 = surf.obst.size(), m2 = this->obsg.size();
+    int m1 = swsol.obst.size(), m2 = this->obsg.size();
     dsyn.resize(m1+m2);
 
     // forward
     fvec d1,d2;
-    surf.travel_time(vsf,d1);
+    swsol.travel_time(vsf,d1);
     this -> compute_gravity(vsf,d2);
     dsyn.segment(0,m1) = d1;
     dsyn.segment(m1,m2) = d2;
@@ -370,7 +328,7 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
     }}}
 
     // allocate space
-    int m1 = surf.obst.size(), m2 = this->obsg.size();
+    int m1 = swsol.obst.size(), m2 = this->obsg.size();
     int n = x.size();
     fvec grad1(n),grad2(n);
     fvec d1(m1),d2(m2);
@@ -379,10 +337,10 @@ compute_grad(const fvec &x,fvec &dsyn,fvec &grad) const
     // compute swd data/grad
     printf("computing gravity gradient ...\n");
     this -> compute_grav_grad(vsf,d2,grad2);
-    surf.compute_grad(vsf,d1,grad1);
+    swsol.compute_grad(vsf,d1,grad1);
 
     //printf("norm of both grad : %g %g\n",std::sqrt(grad1.abs().sum()),std::sqrt(grad2.abs().sum()));
-    fvec res1 = surf.obst - d1;
+    fvec res1 = swsol.obst - d1;
     fvec res2 = obsg - d2;
     float mean1 = res1.sum() / m1, mean2 = res2.sum() / m2;
     float rms1 = std::sqrt(res1.square().sum() / m1);
@@ -410,32 +368,16 @@ smoothing(fvec &grad) const
     int nx = vsinit.dimension(0), ny = vsinit.dimension(1);
     int nz = vsinit.dimension(2);
 
-    // find minimum dz
-    float dz = 1000 * (dep[nz-2] - dep[0]); 
-    for(int i = 0; i < nz-2; i ++) {
-        dz = std::min(dz,dep[i+1] - dep[i]);
-    }
-
-    // create regular data
-    int nz1 = (dep[nz-2] - dep[0]) / (dz * 0.9) + 1;
-    dz = (dep[nz-2] - dep[0]) / (nz1 - 1);
-    fmat3 gradr(nx-2,ny-2,nz1);
-    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),true);
-
-    // smoothing
-    if (param.smooth_in_km) {
-        float dx = std::abs(lat[1] - lat[0]);
-        float dy = std::abs(lon[1] - lon[0]);
-        smooth_sph_pde(gradr.data(),nx-2,ny-2,nz1,dx,dy,dz,
-                        lat[1],lon[1],dep[0],param.sigma_h,
-                        param.sigma_v);
-    }
-    else {
-        smooth_cart_pde(gradr.data(),nx-2,ny-2,nz1,param.sigma_h,param.sigma_v);
-    }
-
-    // interpolate back
-    interp_irregular_z(grad.data(),gradr.data(),nx-2,ny-2,nz-1,nz1,dep.data(),false);
+    // get required parameters
+    float dx = std::abs(lat[1] - lat[0]);
+    float dy = std::abs(lon[1] - lon[0]);
+    smooth_pde_irregular(
+        grad.data(),
+        nx-2,ny-2,nz-1, dep.data(),
+        lat[1],lon[1],dx,dy,
+        param.sigma_h,param.sigma_v,
+        param.smooth_in_km==1
+    );
 }
 
 /**
@@ -499,7 +441,7 @@ assemble(const fmat3 &vsf,const csr_matrix &gmat,csr_matrix &smat,
 void JSurfGTomo::
 inversion(fmat3 &vsf,fvec &dsyn) const
 {
-    int m1 = surf.obst.size(), m2 = obsg.size();
+    int m1 = swsol.obst.size(), m2 = obsg.size();
     int nx = vsf.dimension(0), ny = vsf.dimension(1);
     int nz = vsf.dimension(2);  
     int n = (nx-2) * (ny -2) * (nz  - 1);
@@ -515,8 +457,8 @@ inversion(fmat3 &vsf,fvec &dsyn) const
     this -> compute_gravity(vsf,dsyn2);
 
     // compute and save frechet matrix
-    int nar = surf.frechet_matrix(vsf,dsyn1,"frechet.bin");
-    res.segment(0,m1) = surf.obst - dsyn1;
+    int nar = swsol.frechet_matrix(vsf,dsyn1,"frechet.bin");
+    res.segment(0,m1) = swsol.obst - dsyn1;
     res.segment(m1,m2) = obsg - dsyn2;
 
     // save dsyn

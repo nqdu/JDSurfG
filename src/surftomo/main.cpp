@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
     const auto &param = tomo.param;
     
    // initialize some parameters
-    fvec dsyn(tomo.surf.obst.size()); // synthetics for every step
+    fvec dsyn(tomo.swsol.obst.size()); // synthetics for every step
     fmat3 vsf = tomo.vsinit * 1.0f;  // set inversion model to initial one
 
    // checkerboard test if required
@@ -55,9 +55,21 @@ int main(int argc, char* argv[]){
     for(int k=0;k<nz;k++){
     for(int j=0;j<ny;j++){
     for(int i=0;i<nx;i++){
-        fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+        fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),vsf(i,j,k));
     }}}
     fclose(fp);
+
+    // save true model if required
+    if(tomo.param.ifsyn == 1){
+        resfile= outdir + "/mod_true.dat";
+        fp = fopen(resfile.c_str(),"w");
+        for(int k=0;k<nz;k++){
+        for(int j=0;j<ny;j++){
+        for(int i=0;i<nx;i++){
+            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),tomo.vstrue(i,j,k)); 
+        }}}
+        fclose(fp);
+    }
 
     // allocate space for input x 
     fvec x;
@@ -100,14 +112,14 @@ int main(int argc, char* argv[]){
         }
 
         // compute mean and rms of residuals
-        fvec res = tomo.surf.obst - dsyn;
-        float mean = res.sum() / tomo.surf.obst.size();
+        fvec res = tomo.swsol.obst - dsyn;
+        float mean = res.sum() / tomo.swsol.obst.size();
         float rms = tomo.compute_misfit(dsyn) / res.size();
         printf("mean and rms before this iteration(s): %g %g\n",mean,rms);
 
         // save current synthetics
         std::string resfile = outdir + "/res"+std ::to_string(iter)+".dat";
-        tomo.surf.write_syn(dsyn,resfile);
+        tomo.swsol.write_syn(dsyn,resfile);
 
         // save current model
         resfile = outdir + "/mod_iter"+std ::to_string(iter+1)+".dat";
@@ -115,7 +127,7 @@ int main(int argc, char* argv[]){
         for(int k=0;k<nz;k++){
         for(int j=0;j<ny;j++){
         for(int i=0;i<nx;i++){
-            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep[k],vsf(i,j,k));
+            fprintf(fp,"%g %g %g %g\n",tomo.lon[j],tomo.lat[i],tomo.dep(i,j,k),vsf(i,j,k));
         }}}
         fclose(fp);
     }
@@ -123,18 +135,18 @@ int main(int argc, char* argv[]){
     // compute theoretical traveltimes for last iteration
     printf("\n");
     printf("synthetic traveltime for the result model \n");
-    tomo.surf.travel_time(vsf,dsyn);
+    tomo.swsol.travel_time(vsf,dsyn);
 
     // compute mean and rms of residuals
-    fvec res = tomo.surf.obst - dsyn;
-    float mean = res.sum() / tomo.surf.obst.size();
+    fvec res = tomo.swsol.obst - dsyn;
+    float mean = res.sum() / tomo.swsol.obst.size();
     float rms = tomo.compute_misfit(dsyn) / res.size();
     printf("mean and rms before this iteration(s): %g %g\n",mean,rms);
 
     // save synthetics for last iteration
     int maxiter = tomo.param.maxiter + param.iter_cur;;
     resfile = outdir + "/res"+std ::to_string(maxiter)+".dat";
-    tomo.surf.write_syn(dsyn,resfile);
+    tomo.swsol.write_syn(dsyn,resfile);
 
     printf("\n");
     printf("Program finishes Successfully!\n\n");
