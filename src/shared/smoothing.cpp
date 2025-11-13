@@ -4,7 +4,7 @@
 
 /**
  * @brief deprecated smooth function, so slow ...
- * 
+ * @deprecated
  * @param grad 
  * @param nx 
  * @param ny 
@@ -81,7 +81,8 @@ static int factorial(int n)
  * @param deriv derivative order 
  * @return coef 
 */
-void fdcoefs(int acc,float* __restrict__ coefs,int deriv)
+static void 
+fdcoefs(int acc,float* __restrict__ coefs,int deriv)
 {
     // make sure a even number
     int norder = acc; 
@@ -174,7 +175,9 @@ void interp_irregular_z(float* __restrict gradorg,float* __restrict gradinp,
  * @param nx,ny,nz x/y/z nodes number
  * @param sigma_h/v smooth parameter in x/y and z direction
 */
-void smooth_cart_pde(float * __restrict__ gradin,int nx,int ny,int nz,float sigma_h,float sigma_v)
+static void 
+smooth_cart_pde(float* gradin,int nx,int ny,int nz,
+                float sigma_h,float sigma_v)
 {
     Eigen::TensorMap<fmat3> grad(gradin,nx,ny,nz);
     
@@ -253,7 +256,8 @@ void smooth_cart_pde(float * __restrict__ gradin,int nx,int ny,int nz,float sigm
  * @param dx/dy/dz grid interval in each direction, in deg/km
  * @param sigma_h/v smooth parameter in theta/phi and r direction
 */
-void smooth_sph_pde(float* gradin,int nx,int ny,int nz,
+static void
+smooth_sph_pde(float* gradin,int nx,int ny,int nz,
                 float dx,float dy,float dz,
                 float lat0,float lon0,float z0,
                 float sigma_h,float sigma_v)
@@ -359,4 +363,140 @@ void smooth_sph_pde(float* gradin,int nx,int ny,int nz,
     for(int i=0;i<nx;i++){
         grad(i,j,k) = grad_old(i+n2,j+n2,k+n2);
     }}}
+}
+
+
+static fvec 
+get_regular_z(int nx,int ny,int nz, const float *depth_ireg)
+{
+    Eigen::TensorMap<const fmat3> depth(depth_ireg,nx+2,ny+2,nz+1);
+
+    // get regular dz
+    // find minimum dz and min/max depth 
+    float min_dep = Eigen::Tensor<float,0> (depth.minimum())(0);
+    float max_dep = depth(0,0,nz-2);
+    float dz = 1.0e50;
+    for(int k = 0; k < nz -2; k++) {
+    for(int j = 0; j < ny; j++) {
+    for(int i = 0; i < nx; i++) {
+        float dz1 = depth(i,j,k+1) - depth(i,j,k);
+        if(dz1 < dz) dz = dz1;
+    }}}
+
+    // create regular data
+    int nz1 = (max_dep - min_dep + dz) / (dz * 0.99);
+    float dz1 = (max_dep - min_dep) / (nz1 - 1);
+    fvec depth_reg(nz1);
+    for(int k = 0; k < nz1; ++k) {
+        depth_reg(k) = min_dep + k * dz1;
+    }
+
+    return depth_reg;
+}
+
+/**
+ * @brief Smooth the gradient on an irregular grid using PDE-based smoothing.
+ * 
+ * This function performs Gaussian smoothing on a 3D gradient array defined on an irregular
+ * depth grid. It first interpolates the gradient to a regular depth grid, applies PDE-based
+ * smoothing (either in Cartesian or spherical coordinates), and then interpolates back to
+ * the original irregular grid.
+ * 
+ * @param gradorg Input/output gradient array, shape (nx*ny, nz) in column-major format.
+ *                The array will be modified in-place with the smoothed values.
+ * @param nx Number of nodes in the latitude direction
+ * @param ny Number of nodes in the longitude direction
+ * @param nz Number of nodes in the depth direction
+ * @param depth_ireg Irregular depth grid, shape (nx+2, ny+2, nz+1), in km.
+ *                   Contains the depth values at each grid point.
+ * @param lat0 Starting latitude of the grid (upper boundary), in degrees
+ * @param lon0 Starting longitude of the grid (left boundary), in degrees
+ * @param dx Grid spacing in the latitude direction, in degrees
+ * @param dy Grid spacing in the longitude direction, in degrees
+ * @param sigma_h Horizontal smoothing parameter (standard deviation) in km or grid units,
+ *                depending on smooth_in_km flag
+ * @param sigma_v Vertical smoothing parameter (standard deviation) in km or grid units,
+ *                depending on smooth_in_km flag
+ * @param smooth_in_km If false, performs smoothing in Cartesian coordinates (unit).
+ *                     If true, performs smoothing in spherical coordinates (degrees/km).
+ * 
+ * @note The function uses linear interpolation for converting between irregular and regular grids.
+ * @note Boundary values (first and last depth layers) are preserved without smoothing.
+ * @note The regular grid spacing is determined by the minimum depth interval in the irregular grid.
+ */
+void smooth_pde_irregular(
+    float* __restrict gradorg,
+    int nx,int ny,int nz, const float *depth_ireg,
+    float lat0,float lon0,
+    float dx,float dy,
+    float sigma_h,float sigma_v,
+    bool smooth_in_km
+)
+{
+    // map input data to tensor
+    Eigen::Map<fmat2> grad(gradorg,nx*ny,nz);
+    Eigen::TensorMap<const fmat3> depth(depth_ireg,nx+2,ny+2,nz+1);
+
+    // get regular z
+    fvec depth_reg = get_regular_z(nx,ny,nz,depth_ireg);
+    int nz1 = depth_reg.size();
+    float dz = depth_reg[1] - depth_reg[0];
+
+    // create regular grad
+    fmat2 gradr(nx*ny,nz1);
+
+    // interpolate grad to regular grid
+    for(int k = 0; k < nz1; k ++) {
+        // copy boundary value
+        if(k == 0 || k == nz1 - 1) {
+            int k1 = k == 0 ? 0 : nz - 1;
+            memcpy(&gradr(0,k),&grad(0,k1),sizeof(float) * nx * ny);
+            continue;
+        }
+
+        // check the location in original coordinates
+        float z = depth_reg[0] + k * dz;
+        for(int j = 0; j < ny; j ++) {
+        for(int i = 0; i < nx; i ++) {
+            float z = depth(i+1,j+1,k);
+            int k1 = 0;
+            for(; k1 < nz-1; k1 ++) {
+                if(depth(i+1,j+1,k1) <= z && z < depth(i+1,j+1,k1+1)) {
+                    break;
+                }
+            }
+            float coef = (z - depth(i+1,j+1,k1)) / (depth(i+1,j+1,k1+1) - depth(i+1,j+1,k1));
+            int idx = j * nx + i;
+            gradr(idx,k) = grad(idx,k1) + coef * (grad(idx,k1+1) - grad(idx,k1));
+        }}
+    }
+
+    // smooth on regular grid
+    if(!smooth_in_km) {
+        smooth_cart_pde(gradr.data(),nx,ny,nz1,sigma_h,sigma_v);
+    }
+    else {
+        smooth_sph_pde(gradr.data(),nx,ny,nz1,dx,dy,dz,
+                       lat0,lon0,depth_reg[0],sigma_h,
+                       sigma_v);
+    }
+
+    // interpolate back to irregular grid
+    for(int k = 0; k < nz ; k ++) {
+        if(k == 0 || k == nz-1) {
+            int k1 = k == 0 ? 0 : nz1 - 1;
+            memcpy(&grad(0,k),&gradr(0,k1),sizeof(float) * nx * ny);
+            continue;
+        }
+
+        for(int j = 0; j < ny; j ++) {
+        for(int i = 0; i < nx; i ++) {
+            float z = depth(i+1,j+1,k);
+            int k1  = (z - depth_reg[0]) / dz;
+            float coef = (z - (depth_reg[0] + k1 * dz)) / dz;
+            int idx = j * nx + i;
+            grad(idx,k) = gradr(idx,k1) + coef * (gradr(idx,k1+1) - gradr(idx,k1));
+        }}
+    }
+
 }
