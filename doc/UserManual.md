@@ -59,7 +59,7 @@ The Fortran modules—adapted from the [DSurfTomo](https://github.com/HongjianFa
  <a id="preliminaries"></a>
 
 ## 2. Preliminaries
-This package uses the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) C++ library to handle multi-dimensional arrays. You need to install Eigen on your system before compiling this package.
+This package uses the [Eigen](https://libeigen.gitlab.io/) C++ library to handle multi-dimensional arrays. You need to install Eigen on your system before compiling this package.
 
 Make sure your **C++ compiler supports C++14** standards (e.g., **GCC ≥ 5.0**). If you are using **GCC ≤ 4.8**, please ensure that you have **Eigen ≤ 3.4.0** installed.
 
@@ -171,7 +171,7 @@ Lines beginning with # are treated as comments and ignored. You may freely add y
   Minimum and maximum permitted shear wave velocities (in km/s). These serve as prior constraints on the velocity model.
 
 - **`TOPO_CORR`**  
-  This option enables topographic correction.  If this option is not present in the file, the default value is 0. When enabled (`1`), topographic effects will be considered in the calculation of dispersion by thickening or thinning the first layer. The topographic file will be read from `topographic.dat`, the format can be found [here](#44-topography-file). For details, refer to [Woodhouse, 1974](https://doi.org/10.1111/j.1365-246X.1974.tb04098.x) and [Snieder, 1986](https://doi.org/10.1016/0031-9201(86)90072-5).
+  This option enables topographic correction.  If this option is not present in the file, the default value is 0. When enabled (`1`), topographic effects will be considered in the calculation of dispersion by thickening or thinning the first layer. The topographic file will be read from `topography.dat`, the format can be found [here](#44-topography-file). For details, refer to [Woodhouse, 1974](https://doi.org/10.1111/j.1365-246X.1974.tb04098.x) and [Snieder, 1986](https://doi.org/10.1016/0031-9201(86)90072-5).
 
 - **`SYN_TEST`**  
   Whether to perform a synthetic test. If enabled (`1`), the `MOD.true` file should be provided.
@@ -320,7 +320,7 @@ latitude longitude dispersion_value
 
 <a id="dsurf-topo-file"></a>
 ### 4.4 Topography file
-The template is as following:
+The topography in the study region should be saved in a file named `topography.dat` in the working directory. To eliminate edge effects, please ensure the file is large enough to cover the entire study area. The template is as follows:
 ```bash
 50 52 # no. of points in lat/lon direction
 36.5 95.5  # origin point lat/lon (northwest)
@@ -525,7 +525,7 @@ The maximum number of threads depends on your platform. To determine this, use t
 ```bash
 cat /proc/cpuinfo | grep cores | wc -l
 ```
-The maximum number of threads is `half` the output of this command.
+The maximum number of threads is usually `half` the output of this command.
 
 <a id="empirical-relations"></a>
 
